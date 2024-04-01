@@ -27,7 +27,7 @@ return {
     command="gift",
     group="vehicle",
     help={
-        "The !gift command allows you to keep spawned vehicles in your garage permanently. How To Use:",
+        "The !gift2 command allows you to keep spawned vehicles in your garage permanently. How To Use:",
         "1. Use a standalone 10 car garage (!tp giftgarage), then on phone find a free car and buy it until the garage is full.",
         "2. Spawn any car you want to keep (!deluxo) then use !gift, then park in garage and replace a free car.",
     },
