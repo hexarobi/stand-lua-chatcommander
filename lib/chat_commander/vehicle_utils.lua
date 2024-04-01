@@ -15,7 +15,7 @@ end
 
 -- From Jackz Vehicle Options script
 -- Gets the player's vehicle, attempts to request control. Returns 0 if unable to get control
-vehicle_utils.get_player_vehicle_in_control = function (pid, opts)
+vehicle_utils.get_player_vehicle_in_control = function(pid, opts)
     if not opts then opts = {} end
     local my_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(players.user()) -- Needed to turn off spectating while getting control
     local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
@@ -33,7 +33,7 @@ vehicle_utils.get_player_vehicle_in_control = function (pid, opts)
     end
     if vehicle == 0 and target_ped ~= my_ped and dist > 740000 and not was_spectating then
         if not config.auto_spectate_far_away_players then
-            cc_utils.help_message(pid, "Sorry, you are too far away right now, please try again later")
+            cc_utils.help_message(pid, "Sorry you are too far away right now, please try again later")
             return
         end
         util.toast("Player is too far, auto-spectating for upto 3s.")
@@ -78,20 +78,61 @@ vehicle_utils.get_player_vehicle_in_control = function (pid, opts)
 end
 
 ---
+--- Request Control
+---
+
+vehicle_utils.request_control_once = function(entity)
+    if not NETWORK.NETWORK_IS_IN_SESSION() then
+        return true
+    end
+    local netId = NETWORK.NETWORK_GET_NETWORK_ID_FROM_ENTITY(entity)
+    NETWORK.SET_NETWORK_ID_CAN_MIGRATE(netId, true)
+    return NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(entity)
+end
+
+vehicle_utils.request_control = function(entity, timeout)
+    if not ENTITY.DOES_ENTITY_EXIST(entity) then
+        return false
+    end
+    local end_time = util.current_time_millis() + (timeout or 500)
+    repeat util.yield_once() until vehicle_utils.request_control_once(entity) or util.current_time_millis() >= end_time
+    return vehicle_utils.request_control_once(entity)
+end
+
+---
+--- Teleport
+---
+
+vehicle_utils.teleport_vehicle_to_coords = function(vehicle, position)
+    vehicle_utils.request_control(vehicle)
+    ENTITY.FREEZE_ENTITY_POSITION(vehicle, true)
+    ENTITY.FREEZE_ENTITY_POSITION(vehicle, false)
+    ENTITY.SET_ENTITY_COORDS(vehicle, position.x, position.y, position.z)
+    if position.h ~= nil then
+        ENTITY.SET_ENTITY_HEADING(vehicle, position.h)
+    end
+end
+
+---
 --- Spawn Vehicle
 ---
 
 vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_name)
     cc_utils.debug_log("Spawning vehicle "..vehicle_model_name)
     -- If vehicle model is nil or empty, or is a group name, then get a random vehicle model
-    vehicle_model_name = vehicle_utils.get_random_vehicle_model(vehicle_model_name)
+    local new_vehicle_model_name = vehicle_utils.get_random_vehicle_model(vehicle_model_name)
+    if new_vehicle_model_name then
+        vehicle_model_name = new_vehicle_model_name
+    end
     -- If vehicle model is an alias, get the real model name
     vehicle_model_name = vehicle_utils.apply_vehicle_model_name_shortcuts(vehicle_model_name)
     -- Validate user is allowed to spawn this vehicle
+    cc_utils.debug_log("Spawning vehicle "..vehicle_model_name)
     if vehicle_utils.is_user_allowed_to_spawn_vehicle(pid, vehicle_model_name) then
-        local vehicle = vehicle_utils.spawn_vehicle_for_player(vehicle_model_name, pid)
+        local vehicle = vehicle_utils.spawn_vehicle_for_player(pid, vehicle_model_name)
         if vehicle then
             vehicle_utils.set_all_mods_to_random(vehicle)
+            vehicle_utils.randomize_livery(vehicle)
             vehicle_utils.set_performance_tuning_max(vehicle)
             vehicle_utils.set_plate_for_player(vehicle, pid)
             -- Assume deathbike is spawned for selling, so max its mods
@@ -155,7 +196,7 @@ local function spawn_for_player(pid, vehicle)
     table.insert(player_spawned_vehicles.vehicles, {handle=vehicle})
 end
 
-vehicle_utils.spawn_vehicle_for_player = function(model_name, pid, offset)
+vehicle_utils.spawn_vehicle_for_player = function(pid, model_name, offset)
     if model_name == nil then return nil end
     local model = util.joaat(model_name)
     if STREAMING.IS_MODEL_VALID(model) and STREAMING.IS_MODEL_A_VEHICLE(model) then
@@ -193,6 +234,18 @@ vehicle_utils.is_user_allowed_to_spawn_vehicle = function(pid, vehicle_model_nam
     end
     return true
 end
+
+--- Vehicle Serialize / Deserialize
+
+vehicle_utils.serialize_vehicle = function(vehicle)
+    local car_data = {}
+
+    return car_data
+end
+
+---
+--- Random Vehicles
+---
 
 local function build_random_vehicles()
     local blocked_random_vehicles = {
@@ -255,6 +308,25 @@ end
 ---
 --- Vehicle Paint
 ---
+
+vehicle_utils.get_vehicle_color_from_command = function(command)
+    for _, vehicle_color in pairs(constants.VEHICLE_COLORS) do
+        if vehicle_color.index == tonumber(command) or vehicle_color.name:lower() == command then
+            return vehicle_color
+        end
+    end
+end
+
+vehicle_utils.set_extra_color = function(vehicle, pearl_color, wheel_color)
+    local current_pearl_color = memory.alloc(8)
+    local current_wheel_color = memory.alloc(8)
+    VEHICLE.GET_VEHICLE_EXTRA_COLOURS(vehicle, current_pearl_color, current_wheel_color)
+    pearl_color = vehicle_utils.get_vehicle_color_from_command(pearl_color)
+    wheel_color = vehicle_utils.get_vehicle_color_from_command(wheel_color)
+    if pearl_color == nil then pearl_color = {index=current_pearl_color} end
+    if wheel_color == nil then wheel_color = {index=current_wheel_color} end
+    VEHICLE.SET_VEHICLE_EXTRA_COLOURS(vehicle, pearl_color.index, wheel_color.index)
+end
 
 vehicle_utils.apply_random_paint = function(vehicle_handle)
     -- Dont apply custom paint to emergency vehicles
@@ -396,6 +468,9 @@ vehicle_utils.set_vehicle_paint = function(pid, vehicle, commands)
     --VEHICLE.SET_VEHICLE_MOD(vehicle, constants.VEHICLE_MOD_TYPES.MOD_LIVERY, -1)
 end
 
+vehicle_utils.randomize_livery = function(vehicle)
+    vehicle_utils.set_mod_to_random(vehicle, constants.VEHICLE_MOD_TYPES.MOD_LIVERY)
+end
 
 ---
 --- Performance
@@ -418,6 +493,17 @@ end
 ---
 --- Vehicle Mods
 ---
+
+vehicle_utils.set_mod = function(vehicle, mod_index, mod_value)
+    if mod_value == nil then
+        local max_mod_value = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, mod_index) - 1
+        mod_value = math.random(-1, max_mod_value)
+    end
+    if mod_value ~= nil then
+        entities.set_upgrade_value(vehicle, mod_index, tonumber(mod_value))
+        return mod_value
+    end
+end
 
 vehicle_utils.set_all_mods_to_random = function(vehicle)
     VEHICLE.SET_VEHICLE_MOD_KIT(vehicle, 0)
@@ -483,6 +569,48 @@ vehicle_utils.set_all_mods_to_min = function(vehicle)
 end
 
 ---
+--- Wheels
+---
+
+vehicle_utils.randomize_wheels = function(vehicle)
+    vehicle_utils.set_wheels(vehicle)
+end
+
+vehicle_utils.set_wheels = function(vehicle, commands)
+    local wheels = {
+        name="",
+        type=nil,
+        kind=nil
+    }
+    if commands and commands[2] == "stock" and commands[3] == nil then
+        commands[3] = "-1"
+    end
+    if commands and commands[2] then
+        wheels.type = constants.VEHICLE_WHEEL_TYPES[commands[2]:upper()]
+        if not wheels.type then
+            return false
+        end
+    else
+        wheels.type = math.random(-1, constants.VEHICLE_MAX_OPTIONS.WHEEL_TYPES)
+    end
+    wheels.max_kinds = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, constants.VEHICLE_MOD_TYPES.MOD_FRONTWHEELS) - 1
+    if commands and commands[3] then
+        wheels.kind = commands[3]
+    else
+        wheels.kind = math.random(-1, wheels.max_kinds)
+    end
+    wheels.name = wheels.type
+    for wheel_type_name, wheel_type_number in pairs(constants.VEHICLE_WHEEL_TYPES) do
+        if wheel_type_number == tonumber(wheels.type) then
+            wheels.name = wheel_type_name
+        end
+    end
+    VEHICLE.SET_VEHICLE_WHEEL_TYPE(vehicle, wheels.type)
+    entities.set_upgrade_value(vehicle, constants.VEHICLE_MOD_TYPES.MOD_FRONTWHEELS, wheels.kind)
+    entities.set_upgrade_value(vehicle, constants.VEHICLE_MOD_TYPES.MOD_BACKWHEELS, wheels.kind)
+end
+
+---
 --- Nameplate
 ---
 
@@ -496,7 +624,7 @@ vehicle_utils.set_plate_type = function(pid, vehicle, plate_type_num)
     local plate_type_name = cc_utils.get_enum_value_name(constants.VEHICLE_PLATE_TYPES, plate_type_num)
     ENTITY.SET_ENTITY_AS_MISSION_ENTITY(vehicle, true, true)
     VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT_INDEX(vehicle, plate_type_num)
-    cc_utils.help_message(pid, "Plate type set to " .. plate_type_name)
+    return plate_type_name
 end
 
 local function plateify_text(plate_text)

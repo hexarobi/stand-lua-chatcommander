@@ -640,6 +640,22 @@ constants.control_characters = {
     {9, "*"},
 }
 
+constants.lobby_modes = {
+    { 1, "Public", {}, "Join an existing public lobby. Will often rejoin the previous session after being dropped." },
+    { 2, "New", {}, "Create a new empty public session." },
+    { 3, "Join Friend", {}, "Join a friends session." },
+    { 4, "Friends Only", {}, "Create a new closed friends only session." },
+    { 5, "Join Crew", {}, "Create a new closed friends only session." },
+}
+
+constants.lobby_mode_commands = {
+    { 1, "gopub" },
+    { 2, "gosolopub" },
+    { 3, "gojoinafriend" },
+    { 4, "goclosedfriend" },
+    { 5, "gojoinacrew" },
+}
+
 constants.headlight_color_name_map = {
     default = -1,
     white = 0,

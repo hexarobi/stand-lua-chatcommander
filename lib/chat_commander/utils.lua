@@ -170,4 +170,12 @@ utils.is_in = function(needle, list)
     return false
 end
 
+utils.get_on_off = function(command)
+    return command ~= "off"
+end
+
+utils.get_on_off_string = function(command)
+    return (utils.get_on_off(command) and "ON" or "OFF")
+end
+
 return utils
