@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.3"
+local SCRIPT_VERSION = "0.4"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -35,7 +35,7 @@ if auto_updater == true then error("Invalid auto-updater lib. Please delete your
 ---
 
 local auto_update_config = {
-    source_url="https://raw.githubusercontent.com/hexarobi/stand-lua-chatcommander/main/ChatCommander.lua",
+    --source_url="https://raw.githubusercontent.com/hexarobi/stand-lua-chatcommander/main/ChatCommander.lua",
     script_relpath=SCRIPT_RELPATH,
     project_url="https://github.com/hexarobi/stand-lua-chatcommander",
 }
