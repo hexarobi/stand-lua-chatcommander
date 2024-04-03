@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.2"
+local SCRIPT_VERSION = "0.3"
 
 local chat_commander = {
     chat_commands = {},
@@ -121,7 +121,7 @@ cc.log_user_command = function(pid, commands)
     local new_user_log = build_new_user_log(user_command_log[rockstar_id])
     table.insert(new_user_log, new_log_item)
     user_command_log[rockstar_id] = new_user_log
-    debug_log("Tracked command for "..players.get_name(pid).." "..#new_user_log)
+    --debug_log("Tracked command for "..players.get_name(pid).." "..#new_user_log)
 end
 
 cc.is_user_allowed_to_issue_chat_command = function(pid, commands)
@@ -273,8 +273,8 @@ local function is_command_matched(commands, chat_command)
     if commands[1] == chat_command.command:lower() then
         return true
     end
-    if chat_command.command_aliases then
-        for _, command_alias in pairs(chat_command.command_aliases) do
+    if chat_command.allowed_commands then
+        for _, command_alias in pairs(chat_command.allowed_commands) do
             if commands[1] == command_alias:lower() then
                 return true
             end
@@ -322,17 +322,16 @@ chat.on_message(function(pid, reserved, message_text, is_team_chat, networked, i
 end)
 
 ---
---- On Startup
+--- Load Chat Commands From Files
 ---
 
 add_chat_commands_from_files(filesystem.scripts_dir()..config.chat_command_scripts_dir)
-debug_log("Loaded "..#cc.chat_commands.." chat commands")
+debug_log("Loaded "..cc.count_chat_commands().." chat commands")
 
 if config.default_chat_command_name then
     config.default_chat_command = cc.find_chat_command(config.default_chat_command_name)
 end
 --debug_log("Default chat commands: "..inspect(config.default_chat_command))
-
 
 ---
 --- PassThrough Commands
@@ -361,6 +360,55 @@ local passthrough_commands = {
     },
 
 }
+
+---
+--- Constructor Spawnable Constructs Passthrough Commands
+---
+
+local CONSTRUCTS_DIR = filesystem.stand_dir() .. 'Constructs\\'
+local SPAWNABLE_DIR = CONSTRUCTS_DIR.."spawnable"
+
+local function load_spawnable_names_from_dir(directory)
+    local spawnable_names = {}
+    for _, filepath in ipairs(filesystem.list_files(directory)) do
+        if not filesystem.is_dir(filepath) then
+            local index, filename, ext = string.match(filepath, "(.-)([^\\/]-%.?)[.]([^%.\\/]*)$")
+            table.insert(spawnable_names, filename)
+        end
+    end
+    return spawnable_names
+end
+
+local function load_all_spawnable_names_from_dir(directory)
+    if not filesystem.exists(directory) then return {} end
+    local spawnable_names = load_spawnable_names_from_dir(directory)
+    for _, filepath in ipairs(filesystem.list_files(directory)) do
+        if filesystem.is_dir(filepath) then
+            for index, construct_plan_file in pairs(load_all_spawnable_names_from_dir(filepath)) do
+                table.insert(spawnable_names, construct_plan_file)
+            end
+        end
+    end
+    return spawnable_names
+end
+
+local spawnable_names = load_all_spawnable_names_from_dir(SPAWNABLE_DIR)
+for _, spawnable_name in pairs(spawnable_names) do
+    table.insert(
+        passthrough_commands,
+        {
+            command=spawnable_name,
+            group="constructs",
+            help="Spawn a "..spawnable_name,
+            outbound_command=spawnable_name,
+            requires_player_name=true,
+        }
+    )
+end
+
+---
+--- PassThrough Commands Handler
+---
 
 for _, passthrough_command in passthrough_commands do
     if type(passthrough_command) ~= "table" then
@@ -518,7 +566,6 @@ end, config.afk_mode)
 --- Chat Commands Menu
 
 add_chat_command_menus()
-
 
 ---
 --- Settings Menu
