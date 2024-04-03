@@ -35,6 +35,8 @@ if auto_updater == true then error("Invalid auto-updater lib. Please delete your
 ---
 
 local auto_update_config = {
+    source_url="https://raw.githubusercontent.com/hexarobi/stand-lua-chatcommander/main/ChatCommander.lua",
+    script_relpath=SCRIPT_RELPATH,
     project_url="https://github.com/hexarobi/stand-lua-chatcommander",
 }
 auto_updater.run_auto_update(auto_update_config)
