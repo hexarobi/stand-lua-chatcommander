@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.4"
+local SCRIPT_VERSION = "0.5"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -60,6 +60,7 @@ local state = {}
 
 local constants = require("chat_commander/constants")
 local utils = require("chat_commander/utils")
+local vehicle_utils = require("chat_commander/vehicle_utils")
 local config = require("chat_commander/config")
 local inspect = require("inspect")
 local item_browser = require("chat_commander/item_browser")
@@ -307,6 +308,67 @@ local function afk_mode_tick()
 end
 
 ---
+--- ]
+---
+
+local announcements = {
+    {
+        name="Basic Commands",
+        messages={"Chat commands are now enabled for you! Spawn any vehicle with !name (Ex: !deluxo !op2 !raiju) Keep them with !gift Lose cops with !bail Heal with !autoheal Teleport with !tp Get RP with !levelup Get more help with !help"},
+    },
+    {
+        name="Roulette",
+        messages={"For anyone that wants money, casino roulette is now rigged to always land on 1. Max bet and win 330k per spin. For VIP access say !vip For more details say !roulette"},
+        validator=function()
+            return config.afk_mode and utils.is_player_in_casino(players.user())
+        end
+    },
+    {
+        name="How to Gift",
+        messages={
+            "To keep spawned cars, start with a basic 10 car garage (!tp giftgarage) and fill it with any free car from phone, then use !gift",
+        }
+    }
+}
+
+local function announce(announcement)
+    if not announcement.is_enabled then return end
+    if announcement.validator and type(announcement.validator) == "function" then
+        if not announcement.validator() then
+            --util.toast("Skipping invalid announcement: "..announcement.name)
+            return
+        end
+    end
+    if state.next_announcement_time ~= nil and (util.current_time_millis() < state.next_announcement_time) then
+        util.toast("Skipping flood delayed announcement: "..announcement.name)
+        return
+    end
+    state.next_announcement_time = util.current_time_millis() + config.announce_flood_delay
+    announcement.next_announcement_time = util.current_time_millis() + (config.announce_delay * 60000)
+    for _, message in pairs(announcement.messages) do
+        chat.send_message(utils.replace_command_character(message), false, true, true)
+        util.yield(config.announce_flood_delay)
+    end
+end
+
+local function announcement_tick()
+    if not config.is_auto_announcement_enabled then return end
+    if state.next_announcement_tick_time == nil or util.current_time_millis() > state.next_announcement_tick_time then
+        state.next_announcement_tick_time = util.current_time_millis() + config.announcement_tick_handler_delay
+        for _, announcement in pairs(announcements) do
+            if announcement.next_announcement_time == nil or util.current_time_millis() > announcement.next_announcement_time then
+                announce(announcement)
+            end
+        end
+    end
+end
+
+-- Init announcement delay
+for _, announcement in pairs(announcements) do
+    announcement.next_announcement_time = util.current_time_millis() + (config.announce_delay * 60000)
+end
+
+---
 --- Chat Handler
 ---
 
@@ -532,8 +594,8 @@ local function add_chat_command_to_menu(root_menu, chat_command)
     chat_command.menu = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
     chat_command.menu:divider(chat_command.name)
     chat_command.menu:action("Run", {chat_command.override_action_command or chat_command.name}, get_menu_action_help(chat_command), function(click_type, pid)
-        if chat_command.func ~= nil then
-            return chat_command.func(pid, {chat_command.name}, chat_command)
+        if chat_command.execute ~= nil then
+            return chat_command.execute(pid, {chat_command.name}, chat_command)
         end
     end)
     chat_command.menu:action("Help", {}, get_menu_action_help(chat_command), function(click_type, pid)
@@ -548,6 +610,10 @@ local function add_chat_command_to_menu(root_menu, chat_command)
     chat_command.menu:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
         chat_command.is_enabled = toggle
     end, chat_command.is_enabled)
+    if chat_command.config_menu ~= nil then
+        chat_command.menu:divider("Config")
+        chat_command.config_menu(chat_command.menu)
+    end
     return chat_command.menu
 end
 
@@ -603,11 +669,44 @@ menu.toggle(menu.my_root(), "AFK Mode", {"afk"}, "When enabled, will attempt to 
     config.afk_mode = toggle
 end, config.afk_mode)
 
-
 ---
 --- Chat Commands Menu
+---
 
 add_chat_command_menus()
+
+---
+--- Announcements Menu
+---
+
+menus.announcements = menu.my_root():list("Announcements")
+menus.announcements:action("Announce All", {"announce"}, "Announce all relevant messages", function()
+    for _, announcement in ipairs(announcements) do
+        announcement.next_announcement_time = nil
+    end
+end)
+menus.announcements:divider("Announcements")
+for index, announcement in ipairs(announcements) do
+    local menu_list = menus.announcements:list(announcement.name, {}, "")
+    menu.action(menu_list, "Announce", {}, "Broadcast this announcement to the lobby", function()
+        announcement.next_announcement_time = nil
+        announce(announcement)
+    end)
+    if announcement.is_enabled == nil then announcement.is_enabled = true end
+    menu.toggle(menu_list, "Enabled", {}, "If enabled, announcement will be repeated everytime the delay expires.", function(toggle)
+        announcement.is_enabled = toggle
+    end, announcement.is_enabled)
+    if announcement.delay == nil then announcement.delay = config.announce_delay end
+    --menu.slider(menu_list, "Delay", {}, "Time between repeats of this announcement, in minutes.", 15, 120, announcement.delay, 15, function(value)
+    --    announcement.delay = value
+    --end)
+    for message_index, message in ipairs(announcement.messages) do
+        menu.text_input(menu_list, "Message "..message_index, {"hexascripteditannouncement_"..index.."_"..message_index}, "Edit announcement content", function(value)
+            announcement.messages[message_index] = value
+        end, message)
+    end
+    --menu.readonly(menu_list, "Last Announced", announcement.last_announced or "Never")
+end
 
 ---
 --- Settings Menu
@@ -683,3 +782,5 @@ script_meta_menu:hyperlink("Discord", "https://discord.gg/RF4N7cKz", "Open Disco
 ---
 
 util.create_tick_handler(afk_mode_tick)
+util.create_tick_handler(vehicle_utils.delete_old_vehicles_tick)
+util.create_tick_handler(announcement_tick)
