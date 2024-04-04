@@ -157,7 +157,7 @@ local function get_player_spawned_vehicles(pid)
 end
 
 local next_delete_old_vehicles_tick_time = util.current_time_millis() + config.delete_old_vehicles_tick_handler_delay
-local function delete_old_vehicles_tick()
+vehicle_utils.delete_old_vehicles_tick = function()
     if util.current_time_millis() > next_delete_old_vehicles_tick_time then
         next_delete_old_vehicles_tick_time = util.current_time_millis() + config.delete_old_vehicles_tick_handler_delay
         for _, player_spawned_vehicles in pairs(players_spawned_vehicles) do
@@ -181,7 +181,7 @@ local function delete_old_vehicles_tick()
     end
 end
 
-local function despawn_for_player(pid)
+vehicle_utils.despawn_for_player = function(pid)
     local player_spawned_vehicles = get_player_spawned_vehicles(pid)
     for index, player_spawned_vehicle in ipairs(cc_utils.array_reverse(player_spawned_vehicles.vehicles)) do
         if index >= config.num_allowed_spawned_vehicles_per_player then
@@ -190,7 +190,7 @@ local function despawn_for_player(pid)
     end
 end
 
-local function spawn_for_player(pid, vehicle)
+vehicle_utils.spawn_for_player = function(pid, vehicle)
     local player_spawned_vehicles = get_player_spawned_vehicles(pid)
     table.insert(player_spawned_vehicles.vehicles, {handle=vehicle})
 end
@@ -199,7 +199,7 @@ vehicle_utils.spawn_vehicle_for_player = function(pid, model_name, offset)
     if model_name == nil then return nil end
     local model = util.joaat(model_name)
     if STREAMING.IS_MODEL_VALID(model) and STREAMING.IS_MODEL_A_VEHICLE(model) then
-        despawn_for_player(pid)
+        vehicle_utils.despawn_for_player(pid)
         vehicle_utils.load_hash(model)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         if offset == nil then offset = {x=0, y=5.5, z=0.5} end
@@ -207,7 +207,7 @@ vehicle_utils.spawn_vehicle_for_player = function(pid, model_name, offset)
         local heading = ENTITY.GET_ENTITY_HEADING(target_ped)
         local vehicle = entities.create_vehicle(model, pos, heading)
         STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model)
-        spawn_for_player(pid, vehicle)
+        vehicle_utils.spawn_for_player(pid, vehicle)
         cc_utils.help_message(pid, "Spawning "..model_name)
         return vehicle
     end

@@ -8,12 +8,12 @@ return {
     default_chat_command_name="spawn",
     disable_builtin_chat_commands=true,
     -- User Command Log
-    is_player_allowed_to_bypass_commands_limit = true,
+    is_player_allowed_to_bypass_commands_limit = false,
     user_max_commands_per_time = 3,
     user_command_time = 30000,
     -- Spawns
     num_allowed_spawned_vehicles_per_player=1,
-    delete_old_vehicles_tick_handler_delay=60000,
+    delete_old_vehicles_tick_handler_delay=5000,
     large_vehicles = {
         "kosatka", "jet", "cargoplane", "cargoplane2", "tug", "alkonost", "titan", "volatol", "blimp", "blimp2", "blimp3",
     },
@@ -28,4 +28,6 @@ return {
     min_num_players = 3,
     -- Announcements
     announce_delay = 60,
+    announce_flood_delay = 5000,
+    announcement_tick_handler_delay = 5000,
 }

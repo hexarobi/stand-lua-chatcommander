@@ -11,13 +11,13 @@ utils.debug_log = function(message)
     end
 end
 
-local function replace_command_character(message)
+utils.replace_command_character = function(message)
     local chat_control_character = constants.control_characters[config.chat_control_character_index][2]
     return message:gsub(" !", " "..chat_control_character)
 end
 
 local function send_message(pid, message)
-    message = replace_command_character(message)
+    message = utils.replace_command_character(message)
     if config.send_messages_to_all then
         --message = PLAYER.GET_PLAYER_NAME(pid) .. " " .. message
         chat.send_message(message, false, true, true)

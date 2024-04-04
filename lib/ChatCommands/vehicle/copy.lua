@@ -27,6 +27,7 @@ return {
         if vehicle == 0 then
             cc_utils.help_message(pid, "You must be in a vehicle to use this command")
         else
+            vehicle_utils.despawn_for_player(pid)
             local construct = constructor_lib.copy_construct_plan(constructor_lib.construct_base)
             construct.type = "VEHICLE"
             construct.handle = vehicle
@@ -34,6 +35,7 @@ return {
             constructor_lib.serialize_vehicle_attributes(construct)
             construct.handle = vehicle_utils.spawn_vehicle_for_player(pid, construct.model)
             constructor_lib.deserialize_vehicle_attributes(construct)
+            vehicle_utils.spawn_for_player(pid, construct.handle)
             cc_utils.help_message(pid, "Created a copy of current vehicle")
         end
     end
