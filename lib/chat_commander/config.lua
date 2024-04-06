@@ -14,9 +14,11 @@ return {
     -- Spawns
     num_allowed_spawned_vehicles_per_player=1,
     delete_old_vehicles_tick_handler_delay=5000,
-    large_vehicles = {
-        "kosatka", "jet", "cargoplane", "cargoplane2", "tug", "alkonost", "titan", "volatol", "blimp", "blimp2", "blimp3",
-    },
+    --large_vehicles = {
+    --    "kosatka", "jet", "cargoplane", "cargoplane2", "tug", "alkonost", "titan", "volatol", "blimp", "blimp2", "blimp3",
+    --},
+    is_player_allowed_to_bypass_spawn_locations=false,
+    airfield_only_spawns={"jet", "cargoplane", "cargoplane2", "alkonost", "titan", "volatol", "blimp", "blimp2", "blimp3"},
     -- AFK
     afk_mode = false,
     afk_in_casino = true,

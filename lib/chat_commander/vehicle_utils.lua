@@ -222,17 +222,30 @@ end
 
 vehicle_utils.is_user_allowed_to_spawn_vehicle = function(pid, vehicle_model_name)
     local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-    if target_ped == players.user_ped() then   -- The host user can spawn anything anywhere
+    if config.is_player_allowed_to_bypass_spawn_locations and target_ped == players.user_ped() then   -- The host user can spawn anything anywhere
         return true
     end
-    if cc_utils.is_in(vehicle_model_name, config.large_vehicles) and config.allowed_large_vehicles[vehicle_model_name] ~= true then
-        return false
+    --if cc_utils.is_in(vehicle_model_name, config.large_vehicles) and config.allowed_large_vehicles[vehicle_model_name] ~= true then
+    --    return false
+    --end
+    if cc_utils.is_in(vehicle_model_name, config.airfield_only_spawns) then
+        if not cc_utils.is_player_on_airfield(pid) then
+            cc_utils.help_message(pid, "Cannot spawn vehicle outside of airport")
+            return false
+        end
     end
     if cc_utils.is_player_in_casino(pid) then
         return false
     end
     return true
 end
+
+--vehicle_utils.is_vehicle_allowed_at_position = function(pid, vehicle_model_name)
+--    if cc_utils.is_in(vehicle_model_name, config.airfield_only_spawns) then
+--        return utils.is_player_on_airfield(pid)
+--    end
+--    return true
+--end
 
 --- Vehicle Serialize / Deserialize
 

@@ -136,13 +136,15 @@ utils.get_enum_value_name = function(enum_name, enum_value)
 end
 
 utils.is_player_within_dimensions = function(pid, dimensions)
-    if pid == nil then pid = players.user_ped() end
-    local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-    local player_pos = ENTITY.GET_ENTITY_COORDS(target_ped)
+    local player_pos = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+    return utils.is_position_within_dimensions(player_pos, dimensions)
+end
+
+utils.is_position_within_dimensions = function(position, dimensions)
     return (
-            player_pos.x > dimensions.min.x and player_pos.x < dimensions.max.x
-                    and player_pos.y > dimensions.min.y and player_pos.y < dimensions.max.y
-                    and player_pos.z > dimensions.min.z and player_pos.z < dimensions.max.z
+        position.x > dimensions.min.x and position.x < dimensions.max.x
+        and position.y > dimensions.min.y and position.y < dimensions.max.y
+        and position.z > dimensions.min.z and position.z < dimensions.max.z
     )
 end
 
@@ -159,6 +161,32 @@ utils.is_player_in_casino = function(pid)
             z=-42.28554,
         },
     })
+end
+
+utils.is_player_on_airfield = function(pid)
+    local airfield_rects = {
+        -- Main airport southern runways
+        {
+            min={x=-1955, y=-3550, z=0},
+            max={x=-950, y=-2600, z=20},
+        },
+        -- West runways
+        {
+            min={x=-1730, y=-2720, z=0},
+            max={x=-1225, y=-2125, z=20},
+        },
+        -- Airport2
+        {
+            min={x=990, y=2950, z=30},
+            max={x=1850, y=3390, z=50},
+        },
+    }
+    for _, airfield_rect in airfield_rects do
+        if utils.is_player_within_dimensions(pid, airfield_rect) then
+            return true
+        end
+    end
+    return false
 end
 
 utils.is_in = function(needle, list)

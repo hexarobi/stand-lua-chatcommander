@@ -4,6 +4,7 @@ local cc_utils = require("chat_commander/utils")
 
 return {
     command="roulette",
+    group="other",
     help={
         "HOW TO PLAY RIGGED ROULETTE: Enter the casino (!casino) get chips from cashier then go to TABLE GAMES",
         "Find the HIGH LIMIT purple tables and take a seat at roulette. If you need VIP access join my org (!vip) or buy a penthouse.",
