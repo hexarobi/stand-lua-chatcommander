@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.5"
+local SCRIPT_VERSION = "0.6"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -308,7 +308,7 @@ local function afk_mode_tick()
 end
 
 ---
---- ]
+--- Announcements
 ---
 
 local announcements = {
@@ -326,7 +326,7 @@ local announcements = {
     {
         name="How to Gift",
         messages={
-            "To keep spawned cars, start with a basic 10 car garage (!tp giftgarage) and fill it with any free car from phone, then use !gift",
+            "To keep spawned cars, start with a basic 10 car garage (!tp giftgarage) and fill it with any free car from phone, return your personal vehicle to garage, then use !gift",
         }
     }
 }
@@ -719,22 +719,12 @@ end)
 menus.settings:toggle("Disable Built-In Chat Commands", {}, "Stands built-in chat commands conflict with ChatCommander so they are normally disabled at startup.", function(toggle)
     config.disable_builtin_chat_commands = toggle
 end, config.disable_builtin_chat_commands)
---menu.toggle(menu_options, "Allow by Default", {}, "Any commands with the `Default` op.", function(toggle)
---    config.allow_by_default = toggle
---end, config.allow_by_default)
 menus.settings:toggle("Auto-Spectate Far Away Players", {}, "If enabled, you will automatically spectate players who issue commands from far away. Without this far away players will get an error when issuing commands.", function(toggle)
     config.auto_spectate_far_away_players = toggle
 end, config.auto_spectate_far_away_players)
 menus.settings:slider("Num Spawns Allowed Per Player", {}, "The maximum number of vehicle spawns allowed per player. Once this number is reached, additional spawns will delete the oldest spawned vehicle.", 0, 5, config.num_allowed_spawned_vehicles_per_player, 1, function(value)
     config.num_allowed_spawned_vehicles_per_player = value
 end)
---menus.options_allowed_vehicles = menus.settings:list("Allowed Large Vehicles", {}, "Certain large vehicles are blocked by default to prevent lobby spam, but can be allowed here")
---if state.allowed_large_vehicles == nil then state.allowed_large_vehicles = {} end
---for _, large_vehicle in pairs(config.large_vehicles) do
---    menu.toggle(menus.options_allowed_vehicles, large_vehicle, {}, "", function(toggle)
---        state.allowed_large_vehicles[large_vehicle] = toggle
---    end, state.allowed_large_vehicles[large_vehicle])
---end
 
 menus.settings:divider("AFK Options")
 menus.settings:list_select("AFK Lobby Type", {}, "When in AFK mode and alone in a lobby, what type of lobby should you switch to.", constants.lobby_modes, config.lobby_mode_index, function(index)
