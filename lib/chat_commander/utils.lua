@@ -206,6 +206,16 @@ utils.get_on_off_string = function(command)
     return (utils.get_on_off(command) and "ON" or "OFF")
 end
 
+utils.delete_menu_list = function(menu_list)
+    if type(menu_list) ~= "table" then return end
+    for k, h in pairs(menu_list) do
+        if h:isValid() then
+            menu.delete(h)
+        end
+        menu_list[k] = nil
+    end
+end
+
 utils.is_player_blessed = function(pid)
     if pid == players.user() then return true end
     for _, player_name in pairs(config.blessed_players) do
@@ -216,14 +226,33 @@ utils.is_player_blessed = function(pid)
     return false
 end
 
-utils.delete_menu_list = function(menu_list)
-    if type(menu_list) ~= "table" then return end
-    for k, h in pairs(menu_list) do
-        if h:isValid() then
-            menu.delete(h)
+utils.is_player_friend = function(pid)
+    for friend_index = 1,NETWORK.NETWORK_GET_FRIEND_COUNT() do
+        if NETWORK.NETWORK_GET_FRIEND_DISPLAY_NAME(friend_index) == players.get_name(pid) then
+            return true
         end
-        menu_list[k] = nil
     end
+    return false
+end
+
+utils.is_player_authorized = function(pid)
+    if config.authorized_for.everyone then
+        return true
+    end
+
+    if config.authorized_for.me and pid == players.user() then
+        return true
+    end
+
+    if config.authorized_for.friends and utils.is_player_friend(pid) then
+        return true
+    end
+
+    if config.authorized_for.blessed and utils.is_player_blessed(pid) then
+        return true
+    end
+
+    return false
 end
 
 return utils
