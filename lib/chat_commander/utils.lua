@@ -218,7 +218,7 @@ end
 
 utils.is_player_blessed = function(pid)
     if pid == players.user() then return true end
-    for _, player_name in pairs(config.blessed_players) do
+    for _, player_name in config.blessed_players do
         if players.get_name(pid) == player_name then
             return true
         end
@@ -253,6 +253,24 @@ utils.is_player_authorized = function(pid)
     end
 
     return false
+end
+
+utils.require_dependency = function(dependency_path)
+    local dep_status, required_dep = pcall(require, dependency_path)
+    if not dep_status then
+        util.log("Could not load "..dependency_path..": "..required_dep)
+    else
+        return required_dep
+    end
+end
+
+utils.require_constructor_lib = function()
+    local constructor_lib = utils.require_dependency("constructor/constructor_lib")
+    if not constructor_lib then
+        util.toast("This command relies on constructor_lib. Please install Constructor to use this command.", TOAST_ALL)
+        return
+    end
+    return constructor_lib
 end
 
 return utils

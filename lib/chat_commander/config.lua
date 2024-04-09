@@ -15,7 +15,7 @@ return {
     },
     -- User Command Log
     is_player_allowed_to_bypass_commands_limit = false,
-    user_max_commands_per_time = 3,
+    user_max_commands_per_time = 4,
     user_command_time = 30000,
     -- Spawns
     num_allowed_spawned_vehicles_per_player=1,

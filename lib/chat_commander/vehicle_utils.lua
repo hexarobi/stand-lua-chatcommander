@@ -6,6 +6,7 @@ local constants = require("chat_commander/constants")
 local cc_utils = require("chat_commander/utils")
 local config = require("chat_commander/config")
 local inspect = require("inspect")
+local user_db = require("chat_commander/user_database")
 
 local function show_busyspinner(text)
     HUD.BEGIN_TEXT_COMMAND_BUSYSPINNER_ON("STRING")
@@ -130,13 +131,17 @@ vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_na
     if vehicle_utils.is_user_allowed_to_spawn_vehicle(pid, vehicle_model_name) then
         local vehicle = vehicle_utils.spawn_vehicle_for_player(pid, vehicle_model_name)
         if vehicle then
-            vehicle_utils.set_all_mods_to_random(vehicle)
-            vehicle_utils.randomize_livery(vehicle)
-            vehicle_utils.set_performance_tuning_max(vehicle)
-            vehicle_utils.set_plate_for_player(vehicle, pid)
-            -- Assume deathbike is spawned for selling, so max its mods
-            if string.find(vehicle_model_name, "deathbike") then
-                vehicle_utils.set_all_mods_to_max(vehicle)
+            if user_db.get_pref_spawn_with_fav_paint(pid) then
+                vehicle_utils.apply_favorite_to_current_vehicle(pid, vehicle)
+            else
+                vehicle_utils.set_all_mods_to_random(vehicle)
+                vehicle_utils.randomize_livery(vehicle)
+                vehicle_utils.set_performance_tuning_max(vehicle)
+                vehicle_utils.set_plate_for_player(vehicle, pid)
+                -- Assume deathbike is spawned for selling, so max its mods
+                if string.find(vehicle_model_name, "deathbike") then
+                    vehicle_utils.set_all_mods_to_max(vehicle)
+                end
             end
             return vehicle
         end
@@ -667,6 +672,44 @@ end
 
 vehicle_utils.set_plate_for_player = function(vehicle, pid)
     VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT(vehicle, plateify_text(players.get_name(pid)))
+end
+
+---
+--- Constructor Lib
+---
+
+vehicle_utils.create_construct_from_vehicle = function(vehicle_handle)
+    local constructor_lib = cc_utils.require_constructor_lib()
+    if not constructor_lib then return end
+    local construct = constructor_lib.copy_construct_plan(constructor_lib.construct_base)
+    construct.type = "VEHICLE"
+    construct.handle = vehicle_handle
+    constructor_lib.default_entity_attributes(construct)
+    constructor_lib.serialize_vehicle_attributes(construct)
+    return construct
+end
+
+vehicle_utils.spawn_construct_for_player = function(pid, construct)
+    local constructor_lib = cc_utils.require_constructor_lib()
+    if not constructor_lib then return end
+    if type(construct) ~= "table" then error("Construct must be a table") end
+    if construct.model == nil then error("Construct must have a model") end
+    vehicle_utils.despawn_for_player(pid)
+    construct.handle = vehicle_utils.spawn_vehicle_for_player(pid, construct.model)
+    constructor_lib.deserialize_vehicle_attributes(construct)
+    vehicle_utils.spawn_for_player(pid, construct.handle)
+end
+
+vehicle_utils.apply_favorite_to_current_vehicle = function(pid, vehicle_handle)
+    local constructor_lib = cc_utils.require_constructor_lib()
+    if not constructor_lib then return end
+    local fav_vehicle = user_db.get_user_vehicle(pid)
+    if fav_vehicle then
+        local construct = vehicle_utils.create_construct_from_vehicle(vehicle_handle)
+        construct.vehicle_attributes = fav_vehicle.vehicle_attributes
+        constructor_lib.deserialize_vehicle_attributes(construct)
+        return true
+    end
 end
 
 return vehicle_utils
