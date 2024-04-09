@@ -7,6 +7,12 @@ return {
     auto_spectate_far_away_players = true,
     default_chat_command_name="spawn",
     disable_builtin_chat_commands=true,
+    authorized_for={
+        me=true,
+        everyone=true,
+        friends=true,
+        blessed=true,
+    },
     -- User Command Log
     is_player_allowed_to_bypass_commands_limit = false,
     user_max_commands_per_time = 3,
