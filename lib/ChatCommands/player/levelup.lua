@@ -8,7 +8,7 @@ local config = {
 
 return {
     command="levelup",
-    additional_commands={"level"},
+    additional_commands={"level", "rp"},
     group="player",
     help="Adds RP until you reach target level, default to +10 levels. Max of 120",
     execute=function(pid, commands)

@@ -32,4 +32,6 @@ return {
     announce_delay = 60,
     announce_flood_delay = 5000,
     announcement_tick_handler_delay = 5000,
+    -- Preferences
+    blessed_players = {},
 }

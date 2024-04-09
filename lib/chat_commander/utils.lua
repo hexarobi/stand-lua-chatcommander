@@ -206,4 +206,24 @@ utils.get_on_off_string = function(command)
     return (utils.get_on_off(command) and "ON" or "OFF")
 end
 
+utils.is_player_blessed = function(pid)
+    if pid == players.user() then return true end
+    for _, player_name in pairs(config.blessed_players) do
+        if players.get_name(pid) == player_name then
+            return true
+        end
+    end
+    return false
+end
+
+utils.delete_menu_list = function(menu_list)
+    if type(menu_list) ~= "table" then return end
+    for k, h in pairs(menu_list) do
+        if h:isValid() then
+            menu.delete(h)
+        end
+        menu_list[k] = nil
+    end
+end
+
 return utils
