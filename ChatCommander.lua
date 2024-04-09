@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.6"
+local SCRIPT_VERSION = "0.7"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -54,9 +54,11 @@ local cc = chat_commander
 
 local menus = {}
 local state = {}
+local preferences = {}
 
 ---
 --- Dependencies
+---
 
 local constants = require("chat_commander/constants")
 local utils = require("chat_commander/utils")
@@ -71,6 +73,57 @@ local debug_log = utils.debug_log
 
 local function error_msg(msg)
     util.toast("Error: "..msg, TOAST_ALL)
+end
+
+---
+--- Preferences
+---
+
+local PREFS_FOLDER = filesystem.resources_dir().."ChatCommander"
+filesystem.mkdirs(PREFS_FOLDER)
+local PREFS_FILE = PREFS_FOLDER.."/preferences.json"
+
+local DEFAULT_PREFERENCES = {
+    blessed_players={},
+}
+
+local function save_prefs()
+    local file = io.open(PREFS_FILE, "wb")
+    if file == nil then util.toast("Error opening file for writing: "..PREFS_FILE, TOAST_ALL) return end
+    file:write(soup.json.encode(preferences))
+    file:close()
+end
+
+local function load_prefs()
+    local file = io.open(PREFS_FILE)
+    if file then
+        local prefs_raw = file:read()
+        file:close()
+        preferences = soup.json.decode(prefs_raw)
+        --local status, preferences = pcall(soup.json.decode, prefs_raw)
+        --if not status and type(preferences) == "string" then
+        --    preferences = DEFAULT_PREFERENCES
+        --end
+        --util.toast("Loaded prefs file "..inspect(preferences), TOAST_ALL)
+    else
+        util.toast("Created new prefs file "..inspect(PREFS_FILE), TOAST_ALL)
+        preferences = DEFAULT_PREFERENCES
+    end
+    return preferences
+end
+
+load_prefs()
+
+local function add_blessed_player(player_name)
+    if player_name == "" then return end
+    util.toast("Adding blessed player "..inspect(player_name), TOAST_ALL)
+    for _, player in preferences.blessed_players do
+        if player == player_name then
+            util.toast("Player already blessed")
+            return
+        end
+    end
+    table.insert(preferences.blessed_players, player_name)
 end
 
 ---
@@ -194,6 +247,7 @@ local builtin_chat_commands_paths = {
 }
 
 local function disable_builtin_chat_commands()
+    if config.disable_builtin_chat_commands ~= true then return end
     for _, builtin_chat_commands_path in pairs(builtin_chat_commands_paths) do
         local command_ref = menu.ref_by_path(builtin_chat_commands_path)
         if command_ref.value then
@@ -201,10 +255,6 @@ local function disable_builtin_chat_commands()
             command_ref.value = false
         end
     end
-end
-
-if config.disable_builtin_chat_commands then
-    disable_builtin_chat_commands()
 end
 
 ---
@@ -231,7 +281,7 @@ local function find_new_lobby()
     state.lobby_created_at = util.current_time_millis()
     util.toast("Finding new lobby...", TOAST_ALL)
     -- Enter key to dismiss any game alerts
-    PAD.SET_CONTROL_VALUE_NEXT_FRAME(0, 201, 1)
+    PAD.SET_CONTROL_VALUE_NEXT_FRAME(2, 201, 1)
     menu.trigger_commands(constants.lobby_mode_commands[config.lobby_mode_index][2])
 end
 state.lobby_created_at = util.current_time_millis()
@@ -287,6 +337,7 @@ local function afk_casino_tick()
         enter_casino()
     else
         force_roulette_area()
+        force_rig_roulette()
         force_rig_roulette()
         --util.request_script_host("casinoroulette")
     end
@@ -709,6 +760,28 @@ for index, announcement in ipairs(announcements) do
 end
 
 ---
+--- Blessed Players Menu
+---
+
+state.blessed_player_menus = {}
+local function build_blessed_players_menu()
+    utils.delete_menu_list(state.blessed_player_menus)
+    for index, player in preferences.blessed_players do
+        local player_menu = menus.blessed_players:list(player)
+        player_menu:action("Remove", {}, "Removes the player from your blessed players list", function()
+            for index, blessed_player in preferences.blessed_players do
+                if blessed_player == player then
+                    preferences.blessed_players[index] = nil
+                    save_prefs()
+                    build_blessed_players_menu()
+                end
+            end
+        end)
+        table.insert(state.blessed_player_menus, player_menu)
+    end
+end
+
+---
 --- Settings Menu
 ---
 
@@ -725,6 +798,15 @@ end, config.auto_spectate_far_away_players)
 menus.settings:slider("Num Spawns Allowed Per Player", {}, "The maximum number of vehicle spawns allowed per player. Once this number is reached, additional spawns will delete the oldest spawned vehicle.", 0, 5, config.num_allowed_spawned_vehicles_per_player, 1, function(value)
     config.num_allowed_spawned_vehicles_per_player = value
 end)
+
+menus.blessed_players = menus.settings:list("Blessed Players", {}, "Blessed players have elevated permissions for certain commands")
+menus.blessed_players:text_input("Add Player", {"ccblessplayer"}, "Add a player to your blessed players list", function(player)
+    add_blessed_player(player)
+    save_prefs()
+    build_blessed_players_menu()
+end)
+menus.blessed_players:divider("Blessed Players")
+build_blessed_players_menu()
 
 menus.settings:divider("AFK Options")
 menus.settings:list_select("AFK Lobby Type", {}, "When in AFK mode and alone in a lobby, what type of lobby should you switch to.", constants.lobby_modes, config.lobby_mode_index, function(index)
@@ -766,6 +848,13 @@ script_meta_menu:readonly("Version", SCRIPT_VERSION)
 --end)
 script_meta_menu:hyperlink("Github Source", "https://github.com/hexarobi/stand-lua-chatcommander", "View source files on Github")
 script_meta_menu:hyperlink("Discord", "https://discord.gg/RF4N7cKz", "Open Discord Server")
+
+---
+--- Post-Menu Startup
+---
+
+util.yield()
+disable_builtin_chat_commands()
 
 ---
 --- Tick Handlers
