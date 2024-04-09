@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.8"
+local SCRIPT_VERSION = "0.9"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -66,6 +66,7 @@ local vehicle_utils = require("chat_commander/vehicle_utils")
 local config = require("chat_commander/config")
 local inspect = require("inspect")
 local item_browser = require("chat_commander/item_browser")
+local user_db = require("chat_commander/user_database")
 
 util.require_natives("3095a")
 
@@ -124,6 +125,13 @@ local function add_blessed_player(player_name)
         end
     end
     table.insert(preferences.blessed_players, player_name)
+end
+
+local function save_user_command(pid, command)
+    local user_data = user_db.load_user(pid)
+    if user_data.command_counters[command] == nil then user_data.command_counters[command] = 0 end
+    user_data.command_counters[command] = user_data.command_counters[command] + 1
+    user_db.save_user(pid, user_data)
 end
 
 ---
@@ -452,6 +460,14 @@ cc.find_chat_command = function(raw_command)
     end
 end
 
+local function execute_chat_command(pid, commands, chat_command)
+    if cc.is_user_allowed_to_issue_chat_command(pid, commands) then
+        --debug_log("Executing chat command function "..chat_command.name)
+        chat_command.execute(pid, commands, chat_command)
+        save_user_command(pid, commands[1])
+    end
+end
+
 chat.on_message(function(pid, reserved, message_text, is_team_chat, networked, is_auto)
     if is_auto then return end
     if utils.str_starts_with(message_text, utils.get_chat_control_character()) then
@@ -459,25 +475,18 @@ chat.on_message(function(pid, reserved, message_text, is_team_chat, networked, i
         local commands = utils.strsplit(message_text:lower():sub(2))
         --debug_log("Command Keyword: "..tostring(commands[1]))
         cc.log_user_command(pid, commands)
-        if cc.is_user_allowed_to_issue_chat_command(pid, commands) then
-            --debug_log("Checking against chat commands: "..inspect(cc.chat_commands))
-            for _, chat_command in cc.chat_commands do
-                --debug_log("Checking chat command function "..chat_command.name)
-                if chat_command.is_enabled ~= false and is_command_matched(commands, chat_command) and chat_command.execute then
-                    --debug_log("Calling chat command function "..chat_command.name)
-                    chat_command.execute(pid, commands, chat_command)
-                    --log_user_command(pid, chat_command)
-                    return
-                end
+        --debug_log("Checking against chat commands: "..inspect(cc.chat_commands))
+        for _, chat_command in cc.chat_commands do
+            --debug_log("Checking chat command function "..chat_command.name)
+            if chat_command.is_enabled ~= false and is_command_matched(commands, chat_command) and chat_command.execute then
+                execute_chat_command(pid, commands, chat_command)
+                return
             end
-            -- Default command if no others apply
-            if config.default_chat_command then
-                table.insert(commands, 1, config.default_chat_command.command)
-                --utils.debug_log("Default commands: "..inspect(commands))
-                if cc.is_user_allowed_to_issue_chat_command(pid, commands) then
-                    config.default_chat_command.execute(pid, commands)
-                end
-            end
+        end
+        -- Default command if no others apply
+        if config.default_chat_command then
+            table.insert(commands, 1, config.default_chat_command.command)
+            execute_chat_command(pid, commands, config.default_chat_command)
         end
     end
 end)
