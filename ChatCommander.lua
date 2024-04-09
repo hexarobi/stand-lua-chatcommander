@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.7"
+local SCRIPT_VERSION = "0.8"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -220,6 +220,7 @@ cc.log_user_command = function(pid, commands)
     --debug_log("Tracked command for "..players.get_name(pid).." "..#new_user_log)
 end
 
+
 cc.is_user_allowed_to_issue_chat_command = function(pid, commands)
     local rockstar_id = players.get_rockstar_id(pid)
     if user_command_log[rockstar_id] == nil then user_command_log[rockstar_id] = {} end
@@ -228,6 +229,11 @@ cc.is_user_allowed_to_issue_chat_command = function(pid, commands)
     if #new_user_log > (config.user_max_commands_per_time) and
             not (pid == players.user() and config.is_player_allowed_to_bypass_commands_limit) then
         utils.help_message(pid, "Please slow down your commands.")
+        return false
+    end
+
+    if not utils.is_player_authorized(pid) then
+        debug_log("User not authorized "..pid)
         return false
     end
 
@@ -707,7 +713,7 @@ end
 local function add_chat_command_menus()
     item_browser.browse_item(
         menu.my_root(),
-        {name="Chat Commands", items=build_chat_command_items()},
+        {name="Chat Commands", items=build_chat_command_items(), description="Browsable list of all chat commands you have installed"},
         add_chat_command_to_menu
     )
 end
@@ -730,7 +736,7 @@ add_chat_command_menus()
 --- Announcements Menu
 ---
 
-menus.announcements = menu.my_root():list("Announcements")
+menus.announcements = menu.my_root():list("Announcements", {}, "Announcements system for letting others know about commands")
 menus.announcements:action("Announce All", {"announce"}, "Announce all relevant messages", function()
     for _, announcement in ipairs(announcements) do
         announcement.next_announcement_time = nil
@@ -785,7 +791,8 @@ end
 --- Settings Menu
 ---
 
-menus.settings = menu.my_root():list("Settings")
+menus.settings = menu.my_root():list("Settings", {}, "Additional configuration options")
+
 menus.settings:list_select("Chat Control Character", {}, "Set the character that chat commands must begin with", constants.control_characters, config.chat_control_character_index, function(index)
     config.chat_control_character_index = index
 end)
@@ -799,6 +806,22 @@ menus.settings:slider("Num Spawns Allowed Per Player", {}, "The maximum number o
     config.num_allowed_spawned_vehicles_per_player = value
 end)
 
+menus.settings:divider("Authorization")
+
+menus.authorized_for = menus.settings:list("Authorized For", {}, "What users are authorized to issue chat commands. A user must be in at least one allowed group.")
+menus.authorized_for:toggle("Me", {}, "Yourself", function(toggle)
+    config.authorized_for.me = toggle
+end, config.authorized_for.me)
+menus.authorized_for:toggle("Friends", {}, "People on your friends list", function(toggle)
+    config.authorized_for.friends = toggle
+end, config.authorized_for.friends)
+menus.authorized_for:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
+    config.authorized_for.everyone = toggle
+end, config.authorized_for.everyone)
+menus.authorized_for:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
+    config.authorized_for.blessed = toggle
+end, config.authorized_for.blessed)
+
 menus.blessed_players = menus.settings:list("Blessed Players", {}, "Blessed players have elevated permissions for certain commands")
 menus.blessed_players:text_input("Add Player", {"ccblessplayer"}, "Add a player to your blessed players list", function(player)
     add_blessed_player(player)
@@ -809,6 +832,7 @@ menus.blessed_players:divider("Blessed Players")
 build_blessed_players_menu()
 
 menus.settings:divider("AFK Options")
+
 menus.settings:list_select("AFK Lobby Type", {}, "When in AFK mode and alone in a lobby, what type of lobby should you switch to.", constants.lobby_modes, config.lobby_mode_index, function(index)
     config.lobby_mode_index = index
 end)
@@ -826,12 +850,11 @@ menus.settings:slider("Announce Delay", {}, "Set the time interval for when anno
     config.announce_delay = value
 end)
 
-
 ---
 --- About Menu
 ---
 
-local script_meta_menu = menu.my_root():list("About ChatCommander")
+local script_meta_menu = menu.my_root():list("About ChatCommander", {}, "Information about the script itself")
 script_meta_menu:divider("ChatCommander")
 script_meta_menu:readonly("Version", SCRIPT_VERSION)
 --script_meta_menu:list_select("Release Branch", {}, "Switch from main to dev to get cutting edge updates, but also potentially more bugs.", AUTO_UPDATE_BRANCHES, SELECTED_BRANCH_INDEX, function(index, menu_name, previous_option, click_type)
