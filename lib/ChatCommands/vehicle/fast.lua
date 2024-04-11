@@ -42,8 +42,6 @@ return {
                 menu.trigger_commands("givepower " .. players.get_name(pid) .. " 20")
                 cc_utils.help_message(pid, "Vehicle fast speed is on")
             end
-
-            cc_utils.help_message(pid, "You may now park this car in a full garage and permanently replace another car. For more help say !help gift")
         end
     end
 }
