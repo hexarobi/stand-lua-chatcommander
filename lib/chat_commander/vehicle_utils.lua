@@ -145,6 +145,8 @@ vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_na
             end
             return vehicle
         end
+    else
+        util.log("User "..players.get_name(pid).."not allowed to spawn "..vehicle_model_name)
     end
 end
 
@@ -176,7 +178,7 @@ vehicle_utils.delete_old_vehicles_tick = function()
                     else
                         player_spawned_vehicle.delete_counter = player_spawned_vehicle.delete_counter + 1
                     end
-                    if player_spawned_vehicle.delete_counter > 5 then
+                    if player_spawned_vehicle.delete_counter > 10 then
                         return false
                     end
                 end
@@ -245,24 +247,33 @@ vehicle_utils.is_user_allowed_to_spawn_vehicle = function(pid, vehicle_model_nam
     return true
 end
 
---vehicle_utils.is_vehicle_allowed_at_position = function(pid, vehicle_model_name)
---    if cc_utils.is_in(vehicle_model_name, config.airfield_only_spawns) then
---        return utils.is_player_on_airfield(pid)
---    end
---    return true
---end
-
---- Vehicle Serialize / Deserialize
-
-vehicle_utils.serialize_vehicle = function(vehicle)
-    local car_data = {}
-
-    return car_data
-end
-
 ---
 --- Random Vehicles
 ---
+
+local class_keys = {
+    "off_road", "sport_classic", "military", "compacts", "sport", "muscle", "motorcycle", "open_wheel",
+    "super", "van", "suv", "commercial", "plane", "sedan", "service", "industrial", "helicopter", "boat",
+    "utility", "emergency", "cycle", "coupe", "rail"
+}
+local class_aliases = {
+    offroad="off_road",
+    classic="sport_classic",
+    sportclassic="sport_classic",
+    bike="cycle",
+    openwheel="open_wheel",
+}
+local non_car_classes = {
+    "plane", "helicopter", "boat", "motorcycle", "cycle", "rail", "industrial", "commercial", "emergency", "service",
+}
+
+local find_class_name = function(key)
+    for _, class_key in class_keys do
+        if key == util.joaat(class_key) then
+            return class_key
+        end
+    end
+end
 
 local function build_random_vehicles()
     local blocked_random_vehicles = {
@@ -274,30 +285,15 @@ local function build_random_vehicles()
     }
     vehicle_utils.random_vehicles = {
         all={},
-        boat={},
-        plane={},
-        helicopter={},
-        motorcycle={},
-        cycle={},
-        train={},
         car={},
     }
     for _, vehicle in util.get_vehicles() do
         if not cc_utils.is_in(vehicle, blocked_random_vehicles) then
             table.insert(vehicle_utils.random_vehicles.all, vehicle.name)
-            if vehicle.class == util.joaat("plane") then
-                table.insert(vehicle_utils.random_vehicles.plane, vehicle.name)
-            elseif vehicle.class == util.joaat("helicopter") then
-                table.insert(vehicle_utils.random_vehicles.helicopter, vehicle.name)
-            elseif vehicle.class == util.joaat("boat") then
-                table.insert(vehicle_utils.random_vehicles.boat, vehicle.name)
-            elseif vehicle.class == util.joaat("motorcycle") then
-                table.insert(vehicle_utils.random_vehicles.motorcycle, vehicle.name)
-            elseif vehicle.class == util.joaat("cycle") then
-                table.insert(vehicle_utils.random_vehicles.cycle, vehicle.name)
-            elseif vehicle.class == util.joaat("rail") then
-                table.insert(vehicle_utils.random_vehicles.train, vehicle.name)
-            else
+            local class_name = find_class_name(vehicle.class)
+            if vehicle_utils.random_vehicles[class_name] == nil then vehicle_utils.random_vehicles[class_name] = {} end
+            table.insert(vehicle_utils.random_vehicles[class_name], vehicle.name)
+            if not cc_utils.is_in(class_name, non_car_classes) then
                 table.insert(vehicle_utils.random_vehicles.car, vehicle.name)
             end
         end
@@ -308,6 +304,7 @@ build_random_vehicles()
 
 vehicle_utils.get_random_vehicle_model = function(category)
     if category == nil or category == "" then category = "car" end
+    if class_aliases[category] ~= nil then category = class_aliases[category] end
     local vehicle_list = vehicle_utils.random_vehicles[category]
     if vehicle_list ~= nil then
         local vehicle = vehicle_list[math.random(#vehicle_list)]
