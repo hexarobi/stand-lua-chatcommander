@@ -136,7 +136,7 @@ utils.get_enum_value_name = function(enum_name, enum_value)
 end
 
 utils.is_player_within_dimensions = function(pid, dimensions)
-    local player_pos = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+    local player_pos = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid))
     return utils.is_position_within_dimensions(player_pos, dimensions)
 end
 
@@ -217,7 +217,6 @@ utils.delete_menu_list = function(menu_list)
 end
 
 utils.is_player_blessed = function(pid)
-    if pid == players.user() then return true end
     for _, player_name in config.blessed_players do
         if players.get_name(pid) == player_name then
             return true
