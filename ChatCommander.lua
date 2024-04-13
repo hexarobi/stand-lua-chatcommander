@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.9"
+local SCRIPT_VERSION = "0.10"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -39,7 +39,9 @@ local auto_update_config = {
     script_relpath=SCRIPT_RELPATH,
     project_url="https://github.com/hexarobi/stand-lua-chatcommander",
 }
-auto_updater.run_auto_update(auto_update_config)
+if auto_updater == true then
+    auto_updater.run_auto_update(auto_update_config)
+end
 
 ---
 --- Chat Commander Vars
@@ -110,6 +112,7 @@ local function load_prefs()
         util.toast("Created new prefs file "..inspect(PREFS_FILE), TOAST_ALL)
         preferences = DEFAULT_PREFERENCES
     end
+    config.blessed_players = preferences.blessed_players
     return preferences
 end
 
