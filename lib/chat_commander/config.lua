@@ -1,6 +1,6 @@
 -- ChatCommander Config
 
-return {
+local config = {
     debug = true,
     chat_command_scripts_dir="lib/ChatCommands",
     chat_control_character_index=1,
@@ -19,7 +19,7 @@ return {
     user_command_time = 30000,
     -- Spawns
     num_allowed_spawned_vehicles_per_player=1,
-    delete_old_vehicles_tick_handler_delay=5000,
+    delete_old_vehicles_tick_handler_delay=1000,
     --large_vehicles = {
     --    "kosatka", "jet", "cargoplane", "cargoplane2", "tug", "alkonost", "titan", "volatol", "blimp", "blimp2", "blimp3",
     --},
@@ -41,3 +41,11 @@ return {
     -- Preferences
     blessed_players = {},
 }
+
+-- Set global var from defaults above
+if CHAT_COMMANDER_CONFIG == nil then
+    CHAT_COMMANDER_CONFIG = config
+end
+
+-- Return global var
+return CHAT_COMMANDER_CONFIG
