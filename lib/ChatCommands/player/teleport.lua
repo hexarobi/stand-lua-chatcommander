@@ -2,6 +2,7 @@
 
 local cc_utils = require("chat_commander/utils")
 local vehicle_utils = require("chat_commander/vehicle_utils")
+--local inspect = require("inspect")
 
 local config = {
     teleport_map = {
@@ -30,7 +31,7 @@ local config = {
         simeons = { x = -73.73742, y = -1123.4886, z = 25.499369 },
         soccer = { x = 771.17, y = -232.47, z = 65.79 },
         southbeach = { x = -1116.8607, y = -1717.6504, z = 4.013644 },
-        strip = { x = 118.78938, y = -1313.6859, z = 28.91388 },
+        stripclub = { x = 118.78938, y = -1313.6859, z = 28.91388 },
         videogeddon = { x = 709.92834, y = -831.8337, z = 24.115917 },
         vinewood = { x = 226.5897, y = 209.1123, z = 105.52663 },
         west = { x = -1378.9878, y = -537.43, z = 30.134169 },
@@ -44,6 +45,7 @@ local config = {
         sandyshores = "sandy",
         vanilla = "strip",
         video = "videogeddon",
+        strip = "stripclub",
     },
 }
 
@@ -62,11 +64,24 @@ local function teleport_player_to_coords(pid, x, y, z)
     --help_message(pid, "teleporting..")
     local old_x, old_y, old_z = players.get_waypoint(players.user())
     util.set_waypoint({x=x, y=y, z=z})
-    menu.trigger_commands("wpsummon"..players.get_name(pid))
+    if pid == players.user() then
+        menu.trigger_commands("tpwp")
+    else
+        --util.toast("wpsummonig "..players.get_name(pid).." to "..inspect({x=x, y=y, z=z}), TOAST_ALL)
+        menu.trigger_commands("wpsummon "..players.get_name(pid))
+    end
     if old_x ~= 0 or old_y ~= 0 then
         util.set_waypoint({x=old_x, y=old_y, z=old_z})
     else
         HUD.SET_WAYPOINT_OFF()
+    end
+end
+
+local function find_coords_for_player_name(player_name)
+    for index, player_id in pairs(players.list()) do
+        if PLAYER.GET_PLAYER_NAME(player_id):lower() == player_name:lower() then
+            return ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(player_id), 1)
+        end
     end
 end
 
@@ -77,23 +92,22 @@ return {
     help="Teleport to a stunt jump location.",
     execute=function(pid, commands)
         local command = commands[2]
+        local teleport_coords
         if command == "list" then
             cc_utils.help_message(pid, "Teleport locations: "..table.concat(get_table_keys(config.teleport_map), ", "))
             return
-        end
-        local teleport_coords
-        if command == nil then
+        elseif command ~= nil then
+            if config.teleport_aliases[command] ~= nil then command = config.teleport_aliases[command] end
+            if config.teleport_map[command] ~= nil then
+                teleport_coords = config.teleport_map[command]
+            else
+                teleport_coords = find_coords_for_player_name(command)
+            end
+        else
             local x, y, z, b = players.get_waypoint(pid)
             if (x ~= 0.0 and y ~= 0.0) then
                 teleport_coords = {x=x, y=y, z=z}
-            end
-        else
-            local location = command
-            if config.teleport_aliases[location] ~= nil then command = config.teleport_aliases[location] end
-            if config.teleport_map[location] ~= nil then
-                teleport_coords = config.teleport_map[location]
-            else
-                teleport_coords = cc_utils.find_coords_for_player_name(command)
+                --util.toast("player waypoint "..inspect(teleport_coords))
             end
         end
         if teleport_coords == nil then
@@ -102,17 +116,17 @@ return {
         end
 
         --teleport_player_to_coords(pid, teleport_coords.x, teleport_coords.y, teleport_coords.z)
-        local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle ~= nil and vehicle > 0 then
-            vehicle_utils.teleport_vehicle_to_coords(vehicle, teleport_coords)
-        else
-            if config.allow_teleport_on_foot then
+        --local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
+        --if vehicle ~= nil and vehicle > 0 then
+        --    vehicle_utils.teleport_vehicle_to_coords(vehicle, teleport_coords)
+        --else
+        --    if config.allow_teleport_on_foot then
                 teleport_player_to_coords(pid, teleport_coords.x, teleport_coords.y, teleport_coords.z)
-            else
-                cc_utils.help_message(pid, "You must be inside a vehicle to teleport")
-                return
-            end
-        end
+        --    else
+        --        cc_utils.help_message(pid, "You must be inside a vehicle to teleport")
+        --        return
+        --    end
+        --end
 
     end
 }
