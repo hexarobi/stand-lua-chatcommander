@@ -203,7 +203,7 @@ vehicle_utils.spawn_for_player = function(pid, vehicle)
 end
 
 vehicle_utils.spawn_vehicle_for_player = function(pid, model_name, offset)
-    if model_name == nil then return nil end
+    if model_name == nil or type(model_name) ~= "string" then return nil end
     local model = util.joaat(model_name)
     if STREAMING.IS_MODEL_VALID(model) and STREAMING.IS_MODEL_A_VEHICLE(model) then
         vehicle_utils.despawn_for_player(pid)
@@ -268,6 +268,7 @@ local non_car_classes = {
 }
 
 local find_class_name = function(key)
+    --return lang.get_string(vehicle.class):lower():gsub(" ", ""):gsub("-", "")
     for _, class_key in class_keys do
         if key == util.joaat(class_key) then
             return class_key
