@@ -30,7 +30,6 @@ local config = {
     afk_in_casino = true,
     afk_tick_handler_delay = 5000,
     lobby_mode_index = 1,
-    min_num_players = 3,
     -- Lobby Finder
     fresh_lobby_delay = 600000,
     min_num_players = 3,
