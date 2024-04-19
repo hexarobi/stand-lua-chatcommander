@@ -278,7 +278,7 @@ end
 
 local function build_random_vehicles()
     local blocked_random_vehicles = {
-        "kosatka", "cargoplane", "cargoplane2", "blimp", "blimp2", "blimp3", "alkonost",
+        "kosatka", "cargoplane", "cargoplane2", "blimp", "blimp2", "blimp3", "alkonost", "armytanker",
         "armytrailer", "armytrailer2", "baletrailer", "boattrailer", "boattrailer2", "boattrailer3", "docktrailer",
         "freighttrailer", "graintrailer", "proptrailer", "raketrailer", "trailerlarge", "trailerlogs",
         "trailers", "trailers2", "trailers3", "trailers4", "trailers5", "trailersmall", "trailersmall2", "tvtrailer", "tvtrailer2",
