@@ -254,6 +254,27 @@ utils.is_player_authorized = function(pid)
     return false
 end
 
+utils.is_player_authorized_for_chat_command = function(pid, chat_command)
+    if chat_command.authorized_for.everyone then
+        return true
+    end
+
+    if chat_command.authorized_for.me and pid == players.user() then
+        return true
+    end
+
+    if chat_command.authorized_for.friends and utils.is_player_friend(pid) then
+        return true
+    end
+
+    if chat_command.authorized_for.blessed and utils.is_player_blessed(pid) then
+        return true
+    end
+
+    return false
+end
+
+
 utils.require_dependency = function(dependency_path)
     local dep_status, required_dep = pcall(require, dependency_path)
     if not dep_status then
