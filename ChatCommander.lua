@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.11"
+local SCRIPT_VERSION = "0.12"
 
 -- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
 local status, auto_updater = pcall(require, "auto-updater")
@@ -200,6 +200,20 @@ cc.expand_chat_command_defaults = function(chat_command, filename, path)
             table.insert(chat_command.allowed_commands, allowed_command)
         end
     end
+    -- If authorized_for isn't set at all, then default all to on
+    if chat_command.authorized_for == nil then
+        chat_command.authorized_for = {
+            me = true,
+            friends = true,
+            everyone = true,
+            blessed = true,
+        }
+    end
+    -- If authorized_for is set, but certain keys are not, then default missing keys to off
+    if chat_command.authorized_for.me == nil then chat_command.authorized_for.me = false end
+    if chat_command.authorized_for.friends == nil then chat_command.authorized_for.friends = false end
+    if chat_command.authorized_for.everyone == nil then chat_command.authorized_for.everyone = false end
+    if chat_command.authorized_for.blessed == nil then chat_command.authorized_for.blessed = false end
 end
 
 ---
@@ -233,7 +247,7 @@ cc.log_user_command = function(pid, commands)
 end
 
 
-cc.is_user_allowed_to_issue_chat_command = function(pid, commands)
+cc.is_user_allowed_to_issue_chat_command = function(pid, commands, chat_command)
     local rockstar_id = players.get_rockstar_id(pid)
     if user_command_log[rockstar_id] == nil then user_command_log[rockstar_id] = {} end
 
@@ -246,6 +260,11 @@ cc.is_user_allowed_to_issue_chat_command = function(pid, commands)
 
     if not utils.is_player_authorized(pid) then
         debug_log("User not authorized "..pid)
+        return false
+    end
+
+    if not utils.is_player_authorized_for_chat_command(pid, chat_command) then
+        debug_log("User not authorized for command "..pid.." "..chat_command.command)
         return false
     end
 
@@ -465,7 +484,7 @@ cc.find_chat_command = function(raw_command)
 end
 
 local function execute_chat_command(pid, commands, chat_command)
-    if cc.is_user_allowed_to_issue_chat_command(pid, commands) then
+    if cc.is_user_allowed_to_issue_chat_command(pid, commands, chat_command) then
         --debug_log("Executing chat command function "..chat_command.name)
         chat_command.execute(pid, commands, chat_command)
         save_user_command(pid, commands[1])
@@ -661,6 +680,9 @@ local function get_menu_action_help(chat_command_options)
 end
 
 local function add_chat_command_to_menu(root_menu, chat_command)
+    if chat_command.menu ~= nil then
+        return root_menu:link(chat_command.menu)
+    end
     chat_command.menu = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
     chat_command.menu:divider(chat_command.name)
     chat_command.menu:action("Run", {chat_command.override_action_command or chat_command.name}, get_menu_action_help(chat_command), function(click_type, pid)
@@ -680,6 +702,21 @@ local function add_chat_command_to_menu(root_menu, chat_command)
     chat_command.menu:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
         chat_command.is_enabled = toggle
     end, chat_command.is_enabled)
+
+    chat_command.authorized_for_menu = chat_command.menu:list("Enabled For", {}, "What users are authorized to issue chat commands. A user must be in at least one allowed group.")
+    chat_command.authorized_for_menu:toggle("Me", {}, "Yourself", function(toggle)
+        chat_command.authorized_for.me = toggle
+    end, chat_command.authorized_for.me)
+    chat_command.authorized_for_menu:toggle("Friends", {}, "People on your friends list", function(toggle)
+        chat_command.authorized_for.friends = toggle
+    end, chat_command.authorized_for.friends)
+    chat_command.authorized_for_menu:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
+        chat_command.authorized_for.everyone = toggle
+    end, chat_command.authorized_for.everyone)
+    chat_command.authorized_for_menu:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
+        chat_command.authorized_for.blessed = toggle
+    end, chat_command.authorized_for.blessed)
+
     if chat_command.config_menu ~= nil then
         chat_command.menu:divider("Config")
         chat_command.config_menu(chat_command.menu)
@@ -788,7 +825,7 @@ local function build_blessed_players_menu()
     for index, player in preferences.blessed_players do
         local player_menu = menus.blessed_players:list(player)
         player_menu:action("Remove", {}, "Removes the player from your blessed players list", function()
-            for index, blessed_player in preferences.blessed_players do
+            for index2, blessed_player in preferences.blessed_players do
                 if blessed_player == player then
                     preferences.blessed_players[index] = nil
                     save_prefs()
@@ -870,18 +907,14 @@ end)
 local script_meta_menu = menu.my_root():list("About ChatCommander", {}, "Information about the script itself")
 script_meta_menu:divider("ChatCommander")
 script_meta_menu:readonly("Version", SCRIPT_VERSION)
---script_meta_menu:list_select("Release Branch", {}, "Switch from main to dev to get cutting edge updates, but also potentially more bugs.", AUTO_UPDATE_BRANCHES, SELECTED_BRANCH_INDEX, function(index, menu_name, previous_option, click_type)
---    if click_type ~= 0 then return end
---    auto_update_config.switch_to_branch = AUTO_UPDATE_BRANCHES[index][1]
---    auto_update_config.check_interval = 0
---    auto_updater.run_auto_update(auto_update_config)
---end)
---script_meta_menu:action("Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
---    auto_update_config.check_interval = 0
---    if auto_updater.run_auto_update(auto_update_config) then
---        util.toast("No updates found")
---    end
---end)
+--if auto_update_config and auto_updater then
+--    script_meta_menu:action("Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
+--        auto_update_config.check_interval = 0
+--        if auto_updater.run_auto_update(auto_update_config) then
+--            util.toast("No updates found")
+--        end
+--    end)
+--end
 script_meta_menu:hyperlink("Github Source", "https://github.com/hexarobi/stand-lua-chatcommander", "View source files on Github")
 script_meta_menu:hyperlink("Discord", "https://discord.gg/RF4N7cKz", "Open Discord Server")
 
