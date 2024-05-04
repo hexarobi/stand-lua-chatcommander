@@ -9,7 +9,7 @@ return {
     help="Remove any dirt from your current vehicle",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             VEHICLE.SET_VEHICLE_DIRT_LEVEL(vehicle, 0)
             cc_utils.help_message(pid, "Vehicle washed and any dirt removed")
         end

@@ -9,7 +9,7 @@ return {
     help="Set the vehicle tiresmoke color",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             local color = vehicle_utils.get_command_color(commands[2])
             if not color then
                 cc_utils.help_message(pid, "Invalid color")

@@ -10,9 +10,7 @@ return {
     help="Delete your current vehicle",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle == 0 then
-            cc_utils.help_message(pid, "You are not in a vehicle")
-        else
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             cc_utils.help_message(pid, "Attempting to delete your current vehicle, thanks for keeping the lobby clean")
             entities.delete_by_handle(vehicle)
         end

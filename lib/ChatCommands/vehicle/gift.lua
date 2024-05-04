@@ -31,9 +31,7 @@ return {
     },
     execute=function(pid)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle == 0 then
-            cc_utils.help_message(pid, "You must be in a vehicle to use !gift")
-        else
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             gift_vehicle_to_player(pid, vehicle)
             cc_utils.help_message(pid, "You may now park this car in a full garage and permanently replace another car. For more help say !help gift")
         end

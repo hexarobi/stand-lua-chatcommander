@@ -9,7 +9,7 @@ return {
     help="Repair any damage done to your current vehicle",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             VEHICLE.SET_VEHICLE_FIXED(vehicle)
             -- Also repair vehicle if its been destroyed by water
             VEHICLE.SET_VEHICLE_DIRT_LEVEL(vehicle, 0.0)

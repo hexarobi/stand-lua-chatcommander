@@ -9,7 +9,7 @@ return {
     help="Set the vehicle plate text",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             if commands[2] == nil then
                 vehicle_utils.set_plate_for_player(vehicle, pid)
                 cc_utils.help_message(pid, "Vehicle plate text set to name")

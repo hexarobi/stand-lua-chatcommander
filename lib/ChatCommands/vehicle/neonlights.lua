@@ -10,7 +10,7 @@ return {
     help="Set the vehicle neon color",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle and commands and commands[2] then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) and commands and commands[2] then
             local color = vehicle_utils.get_command_color(commands[2])
             if not color then
                 cc_utils.help_message(pid, "Invalid color")

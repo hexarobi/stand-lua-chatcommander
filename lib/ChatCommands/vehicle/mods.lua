@@ -10,7 +10,7 @@ return {
     help="Set the vehicle modifications. Allowed parameters: max, stock",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             if commands[2] == "max" then
                 vehicle_utils.set_all_mods_to_max(vehicle)
                 cc_utils.help_message(pid, "Set all vehicle modifications to max")

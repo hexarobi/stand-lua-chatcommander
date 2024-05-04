@@ -30,9 +30,7 @@ return {
             end
         elseif commands[2] == "paint" then
             local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-            if vehicle == 0 then
-                cc_utils.help_message(pid, "You must be in a vehicle to apply your favorite paint")
-            else
+            if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
                 if vehicle_utils.apply_favorite_to_current_vehicle(pid, vehicle) then
                     cc_utils.help_message(pid, "Applying fav vehicle paint to current vehicle")
                 end

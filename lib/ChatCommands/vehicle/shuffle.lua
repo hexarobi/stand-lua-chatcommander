@@ -9,7 +9,7 @@ return {
     help="Shuffle your vehicle paint, mods, and wheels",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             vehicle_utils.set_all_mods_to_random(vehicle)
             vehicle_utils.set_performance_tuning_max(vehicle)
             vehicle_utils.apply_random_paint(vehicle)

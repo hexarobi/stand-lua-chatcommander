@@ -9,7 +9,7 @@ return {
     help="Set the vehicle tires: burst bulletproof drift stock",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             if commands[2] == "burst" then
                 VEHICLE.SET_VEHICLE_TYRES_CAN_BURST(vehicle, true)
                 for wheel = 0,7 do

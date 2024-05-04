@@ -10,7 +10,7 @@ return {
     help="Set the vehicle headlights color",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             local color_number = tonumber(commands[2])
             local color_name = commands[2]
             if constants.headlight_color_name_map[color_name] ~= nil then

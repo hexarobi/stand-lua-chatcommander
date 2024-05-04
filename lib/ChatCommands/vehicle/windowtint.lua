@@ -19,7 +19,7 @@ return {
     help="Set the vehicle window tint color: none, black, dark, light, stock, limo, green",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle then
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             local tint_level = tonumber(commands[2])
             local tint_name = commands[2]
             if window_tint_map[tint_name] ~= nil then tint_level = window_tint_map[tint_name] end

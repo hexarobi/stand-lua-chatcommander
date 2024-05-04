@@ -9,10 +9,7 @@ return {
     help="",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle == 0 then
-            cc_utils.help_message(pid, "You must be in a vehicle to increase its speed")
-        else
-
+        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             local fast_percent = tonumber(commands[2])
             --local enabled_string = get_on_off_string(commands[2])
             --local enabled = (enabled_string == "ON")
