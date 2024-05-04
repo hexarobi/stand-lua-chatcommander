@@ -18,7 +18,7 @@ local config = {
     user_max_commands_per_time = 4,
     user_command_time = 30000,
     -- Spawns
-    num_allowed_spawned_vehicles_per_player=1,
+    num_allowed_spawned_vehicles_per_player=2,
     delete_old_vehicles_tick_handler_delay=1000,
     --large_vehicles = {
     --    "kosatka", "jet", "cargoplane", "cargoplane2", "tug", "alkonost", "titan", "volatol", "blimp", "blimp2", "blimp3",
@@ -35,10 +35,11 @@ local config = {
     min_num_players = 3,
     -- Announcements
     announce_delay = 60,
-    announce_flood_delay = 5000,
+    announce_flood_delay = 10000,
     announcement_tick_handler_delay = 5000,
     -- Preferences
     blessed_players = {},
+    passthrough_commands = {},
 }
 
 -- Set global var from defaults above

@@ -35,7 +35,7 @@ vehicle_utils.get_player_vehicle_in_control = function(pid, opts)
     if vehicle == 0 and target_ped ~= my_ped and dist > 740000 and not was_spectating then
         if not config.auto_spectate_far_away_players then
             cc_utils.help_message(pid, "Sorry you are too far away right now, please try again later")
-            return
+            return -1
         end
         util.toast("Player is too far, auto-spectating for upto 3s.")
         show_busyspinner("Player is too far, auto-spectating for upto 3s.")
@@ -76,6 +76,15 @@ vehicle_utils.get_player_vehicle_in_control = function(pid, opts)
         NETWORK.NETWORK_SET_IN_SPECTATOR_MODE(false, target_ped)
     end
     return vehicle
+end
+
+vehicle_utils.is_vehicle_command_ready = function(pid, vehicle)
+    if vehicle == 0 then
+        cc_utils.help_message(pid, "You must be in a vehicle to use this command")
+        return false
+    elseif vehicle > 0 then
+        return true
+    end
 end
 
 ---
@@ -282,14 +291,14 @@ local function build_random_vehicles()
         "armytrailer", "armytrailer2", "baletrailer", "boattrailer", "boattrailer2", "boattrailer3", "docktrailer",
         "freighttrailer", "graintrailer", "proptrailer", "raketrailer", "trailerlarge", "trailerlogs",
         "trailers", "trailers2", "trailers3", "trailers4", "trailers5", "trailersmall", "trailersmall2", "tvtrailer", "tvtrailer2",
-        "coach",
+        "coach", "tr2", "tr3", "tr4", "trflat",
     }
     vehicle_utils.random_vehicles = {
         all={},
         car={},
     }
     for _, vehicle in util.get_vehicles() do
-        if not cc_utils.is_in(vehicle, blocked_random_vehicles) then
+        if not cc_utils.is_in(vehicle.name, blocked_random_vehicles) then
             table.insert(vehicle_utils.random_vehicles.all, vehicle.name)
             local class_name = find_class_name(vehicle.class)
             if vehicle_utils.random_vehicles[class_name] == nil then vehicle_utils.random_vehicles[class_name] = {} end
@@ -408,16 +417,16 @@ vehicle_utils.set_vehicle_colors = function(vehicle, main_color, secondary_color
         elseif main_color.r ~= nil then
             cc_utils.debug_log("Painting vehicle custom color "..main_color.hex)
             VEHICLE.SET_VEHICLE_CUSTOM_PRIMARY_COLOUR(vehicle, main_color.r, main_color.g, main_color.b)
-            VEHICLE.SET_VEHICLE_MOD_COLOR_1(vehicle, main_color.paint_type, 0, 0)
+            VEHICLE.SET_VEHICLE_MOD_COLOR_1(vehicle, main_color.paint_type or 0, 0, 0)
         end
         if secondary_color and secondary_color.index ~= nil then
             cc_utils.debug_log("Painting vehicle secondary color "..secondary_color.name)
-            VEHICLE.SET_VEHICLE_MOD_COLOR_2(vehicle, secondary_color.paint_type, secondary_color.index, 0)
+            VEHICLE.SET_VEHICLE_MOD_COLOR_2(vehicle, secondary_color.paint_type or 0, secondary_color.index, 0)
             VEHICLE.CLEAR_VEHICLE_CUSTOM_SECONDARY_COLOUR(vehicle)
         elseif secondary_color and secondary_color.r ~= nil then
             cc_utils.debug_log("Painting vehicle secondary custom color "..secondary_color.hex)
             VEHICLE.SET_VEHICLE_CUSTOM_SECONDARY_COLOUR(vehicle, secondary_color.r, secondary_color.g, secondary_color.b)
-            VEHICLE.SET_VEHICLE_MOD_COLOR_2(vehicle, secondary_color.paint_type, 0, 0)
+            VEHICLE.SET_VEHICLE_MOD_COLOR_2(vehicle, secondary_color.paint_type or 0, 0, 0)
         end
     end
 end
