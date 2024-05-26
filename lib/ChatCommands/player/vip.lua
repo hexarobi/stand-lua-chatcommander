@@ -28,7 +28,7 @@ return {
             menu.trigger_commands("ceostart")
             util.yield(100)
             if players.get_org_type(players.user()) == -1 then
-                utils.help_message(pid, "Sorry, VIP is not available right now.")
+                cc_utils.help_message(pid, "Sorry, VIP is not available right now.")
             end
         end
         -- Thanks to Totaw Annihiwation for this script event! // Position - 0x2725D7
