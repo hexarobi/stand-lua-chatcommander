@@ -16,12 +16,14 @@ return {
                 cc_utils.help_message(pid, "Invalid color")
                 return
             end
+            VEHICLE.SET_VEHICLE_MOD_KIT(vehicle, 0)
             VEHICLE.SET_VEHICLE_NEON_ENABLED(vehicle, 0, true)
             VEHICLE.SET_VEHICLE_NEON_ENABLED(vehicle, 1, true)
             VEHICLE.SET_VEHICLE_NEON_ENABLED(vehicle, 2, true)
             VEHICLE.SET_VEHICLE_NEON_ENABLED(vehicle, 3, true)
-            VEHICLE.SET_VEHICLE_NEON_ENABLED(vehicle, color.r, color.g, color.b)
-            cc_utils.help_message(pid, "Set vehicle neon lights color to "..commands[2])
+            VEHICLE.SET_VEHICLE_NEON_COLOUR(vehicle, color.r, color.g, color.b)
+            --VEHICLE.SET_VEHICLE_NEON_INDEX_COLOUR(vehicle, color.index)
+            cc_utils.help_message(pid, "Set vehicle neon lights color to "..color.name.." ("..color.index..")")
         end
     end
 }
