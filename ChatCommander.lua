@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.14.1"
+local SCRIPT_VERSION = "0.14.2"
 
 ---
 --- Auto Updater
@@ -103,9 +103,11 @@ local constants = require("chat_commander/constants")
 local utils = require("chat_commander/utils")
 local vehicle_utils = require("chat_commander/vehicle_utils")
 local config = require("chat_commander/config")
-local inspect = require("inspect")
 local item_browser = require("chat_commander/item_browser")
 local user_db = require("chat_commander/user_database")
+
+util.ensure_package_is_installed('lua/inspect')
+local inspect = require("inspect")
 
 util.require_natives("3095a")
 
