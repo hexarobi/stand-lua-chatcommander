@@ -4,6 +4,7 @@ local cc_utils = require("chat_commander/utils")
 
 return {
     command="unstick",
+    additional_commands={"unstuck"},
     group="player",
     help="Attempts to trigger location loading initialization. Useful when loading into casino etc just spins.",
     execute=function(pid)
