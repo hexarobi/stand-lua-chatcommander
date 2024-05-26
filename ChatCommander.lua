@@ -1,44 +1,78 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.13"
-
--- Auto Updater from https://github.com/hexarobi/stand-lua-auto-updater
-local status, auto_updater = pcall(require, "auto-updater")
-if not status then
-    if not async_http.have_access() then
-        util.toast("Failed to install auto-updater. Internet access is disabled. To enable automatic updates, please stop the script then uncheck the `Disable Internet Access` option.")
-    else
-        local auto_update_complete = nil util.toast("Installing auto-updater...", TOAST_ALL)
-        async_http.init("raw.githubusercontent.com", "/hexarobi/stand-lua-auto-updater/main/auto-updater.lua",
-                function(raw_result, raw_headers, raw_status_code)
-                    local function parse_auto_update_result(result, headers, status_code)
-                        local error_prefix = "Error downloading auto-updater: "
-                        if status_code ~= 200 then util.toast(error_prefix..status_code, TOAST_ALL) return false end
-                        if not result or result == "" then util.toast(error_prefix.."Found empty file.", TOAST_ALL) return false end
-                        filesystem.mkdir(filesystem.scripts_dir() .. "lib")
-                        local file = io.open(filesystem.scripts_dir() .. "lib\\auto-updater.lua", "wb")
-                        if file == nil then util.toast(error_prefix.."Could not open file for writing.", TOAST_ALL) return false end
-                        file:write(result) file:close() util.toast("Successfully installed auto-updater lib", TOAST_ALL) return true
-                    end
-                    auto_update_complete = parse_auto_update_result(raw_result, raw_headers, raw_status_code)
-                end, function() util.toast("Error downloading auto-updater lib. Update failed to download.", TOAST_ALL) end)
-        async_http.dispatch() local i = 1 while (auto_update_complete == nil and i < 40) do util.yield(250) i = i + 1 end
-        if auto_update_complete == nil then error("Error downloading auto-updater lib. HTTP Request timeout") end
-        auto_updater = require("auto-updater")
-    end
-end
-if auto_updater == true then error("Invalid auto-updater lib. Please delete your Stand/Lua Scripts/lib/auto-updater.lua and try again") end
+local SCRIPT_VERSION = "0.14"
 
 ---
 --- Auto Updater
 ---
 
 local auto_update_config = {
-    --source_url="https://raw.githubusercontent.com/hexarobi/stand-lua-chatcommander/main/ChatCommander.lua",
+    source_url="https://raw.githubusercontent.com/hexarobi/stand-lua-chatcommander/main/ChatCommander.lua",
     script_relpath=SCRIPT_RELPATH,
     project_url="https://github.com/hexarobi/stand-lua-chatcommander",
+    branch="main",
+    dependencies={
+        "lib/chat_commander/config.lua",
+        "lib/chat_commander/constants.lua",
+        "lib/chat_commander/item_browser.lua",
+        "lib/chat_commander/user_database.lua",
+        "lib/chat_commander/utils.lua",
+        "lib/chat_commander/vehicle_utils.lua",
+        "lib/file_database.lua",
+        -- ChatCommands
+        "lib/ChatCommands/other/event.lua",
+        "lib/ChatCommands/other/kick.lua",
+        "lib/ChatCommands/other/newlobby.lua",
+        "lib/ChatCommands/other/ping.lua",
+        "lib/ChatCommands/other/roulette.lua",
+        -- Player
+        "lib/ChatCommands/player/allguns.lua",
+        "lib/ChatCommands/player/ammo.lua",
+        "lib/ChatCommands/player/autoheal.lua",
+        "lib/ChatCommands/player/bail.lua",
+        "lib/ChatCommands/player/casino.lua",
+        "lib/ChatCommands/player/ceopay.lua",
+        "lib/ChatCommands/player/cleanup.lua",
+        "lib/ChatCommands/player/collectibles.lua",
+        "lib/ChatCommands/player/escape.lua",
+        "lib/ChatCommands/player/levelup.lua",
+        "lib/ChatCommands/player/parachute.lua",
+        "lib/ChatCommands/player/stuntjump.lua",
+        "lib/ChatCommands/player/teleport.lua",
+        "lib/ChatCommands/player/unstick.lua",
+        "lib/ChatCommands/player/vip.lua",
+        "lib/ChatCommands/player/wanted.lua",
+        -- Vehicles
+        "lib/ChatCommands/vehicle/copy.lua",
+        "lib/ChatCommands/vehicle/deletevehicle.lua",
+        "lib/ChatCommands/vehicle/fast.lua",
+        "lib/ChatCommands/vehicle/fav.lua",
+        "lib/ChatCommands/vehicle/gift.lua",
+        "lib/ChatCommands/vehicle/headlights.lua",
+        "lib/ChatCommands/vehicle/horn.lua",
+        "lib/ChatCommands/vehicle/livery.lua",
+        "lib/ChatCommands/vehicle/mods.lua",
+        "lib/ChatCommands/vehicle/modsmax.lua",
+        "lib/ChatCommands/vehicle/neonlights.lua",
+        "lib/ChatCommands/vehicle/paint.lua",
+        "lib/ChatCommands/vehicle/plate.lua",
+        "lib/ChatCommands/vehicle/platetype.lua",
+        "lib/ChatCommands/vehicle/repair.lua",
+        "lib/ChatCommands/vehicle/shuffle.lua",
+        "lib/ChatCommands/vehicle/spawn.lua",
+        "lib/ChatCommands/vehicle/tires.lua",
+        "lib/ChatCommands/vehicle/tiresmoke.lua",
+        "lib/ChatCommands/vehicle/tune.lua",
+        "lib/ChatCommands/vehicle/wash.lua",
+        "lib/ChatCommands/vehicle/wheelcolor.lua",
+        "lib/ChatCommands/vehicle/wheels.lua",
+        "lib/ChatCommands/vehicle/windowtint.lua",
+    },
 }
+
+util.ensure_package_is_installed('lua/auto-updater')
+local auto_updater = require('auto-updater')
 if auto_updater == true then
     auto_updater.run_auto_update(auto_update_config)
 end
