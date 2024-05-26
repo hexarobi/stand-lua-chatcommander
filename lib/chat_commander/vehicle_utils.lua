@@ -14,6 +14,28 @@ local function show_busyspinner(text)
     HUD.END_TEXT_COMMAND_BUSYSPINNER_ON(2)
 end
 
+vehicle_utils.get_control_of_vehicle = function(vehicle)
+    if NETWORK.NETWORK_HAS_CONTROL_OF_ENTITY(vehicle) then
+        return vehicle
+    end
+    -- Loop until we get control
+    local netid = NETWORK.NETWORK_GET_NETWORK_ID_FROM_ENTITY(vehicle)
+    local has_control_ent = false
+    local loops = 15
+    NETWORK.SET_NETWORK_ID_CAN_MIGRATE(netid, true)
+
+    -- Attempts 15 times, with 8ms per attempt
+    while not has_control_ent do
+        has_control_ent = NETWORK.NETWORK_REQUEST_CONTROL_OF_ENTITY(vehicle)
+        loops = loops - 1
+        -- wait for control
+        util.yield(15)
+        if loops <= 0 then
+            break
+        end
+    end
+end
+
 -- From Jackz Vehicle Options script
 -- Gets the player's vehicle, attempts to request control. Returns 0 if unable to get control
 vehicle_utils.get_player_vehicle_in_control = function(pid, opts)
@@ -345,10 +367,8 @@ vehicle_utils.set_extra_color = function(vehicle, pearl_color, wheel_color)
     local current_pearl_color = memory.alloc(8)
     local current_wheel_color = memory.alloc(8)
     VEHICLE.GET_VEHICLE_EXTRA_COLOURS(vehicle, current_pearl_color, current_wheel_color)
-    pearl_color = vehicle_utils.get_vehicle_color_from_command(pearl_color)
-    wheel_color = vehicle_utils.get_vehicle_color_from_command(wheel_color)
-    if pearl_color == nil then pearl_color = {index=current_pearl_color} end
-    if wheel_color == nil then wheel_color = {index=current_wheel_color} end
+    if pearl_color == nil then pearl_color = {index=memory.read_int(current_pearl_color)} end
+    if wheel_color == nil then wheel_color = {index=memory.read_int(current_wheel_color)} end
     VEHICLE.SET_VEHICLE_EXTRA_COLOURS(vehicle, pearl_color.index, wheel_color.index)
 end
 
@@ -618,8 +638,8 @@ vehicle_utils.set_wheels = function(vehicle, commands)
         wheels.type = math.random(-1, constants.VEHICLE_MAX_OPTIONS.WHEEL_TYPES)
     end
     wheels.max_kinds = VEHICLE.GET_NUM_VEHICLE_MODS(vehicle, constants.VEHICLE_MOD_TYPES.MOD_FRONTWHEELS) - 1
-    if commands and commands[3] then
-        wheels.kind = commands[3]
+    if commands and commands[3] and tonumber(commands[3]) then
+        wheels.kind = tonumber(commands[3])
     else
         wheels.kind = math.random(-1, wheels.max_kinds)
     end
@@ -632,6 +652,7 @@ vehicle_utils.set_wheels = function(vehicle, commands)
     VEHICLE.SET_VEHICLE_WHEEL_TYPE(vehicle, wheels.type)
     entities.set_upgrade_value(vehicle, constants.VEHICLE_MOD_TYPES.MOD_FRONTWHEELS, wheels.kind)
     entities.set_upgrade_value(vehicle, constants.VEHICLE_MOD_TYPES.MOD_BACKWHEELS, wheels.kind)
+    return wheels
 end
 
 ---
