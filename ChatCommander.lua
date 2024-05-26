@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.14"
+local SCRIPT_VERSION = "0.14.1"
 
 ---
 --- Auto Updater
@@ -1090,14 +1090,14 @@ end)
 local script_meta_menu = menu.my_root():list("About ChatCommander", {}, "Information about the script itself")
 script_meta_menu:divider("ChatCommander")
 script_meta_menu:readonly("Version", SCRIPT_VERSION)
---if auto_update_config and auto_updater then
---    script_meta_menu:action("Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
---        auto_update_config.check_interval = 0
---        if auto_updater.run_auto_update(auto_update_config) then
---            util.toast("No updates found")
---        end
---    end)
---end
+if auto_update_config and auto_updater then
+    script_meta_menu:action("Check for Update", {}, "The script will automatically check for updates at most daily, but you can manually check using this option anytime.", function()
+        auto_update_config.check_interval = 0
+        if auto_updater.run_auto_update(auto_update_config) then
+            util.toast("No updates found")
+        end
+    end)
+end
 script_meta_menu:hyperlink("Github Source", "https://github.com/hexarobi/stand-lua-chatcommander", "View source files on Github")
 script_meta_menu:hyperlink("Discord", "https://discord.gg/RF4N7cKz", "Open Discord Server")
 
