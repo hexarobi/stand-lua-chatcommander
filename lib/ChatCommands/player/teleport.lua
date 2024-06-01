@@ -121,7 +121,7 @@ return {
         --    vehicle_utils.teleport_vehicle_to_coords(vehicle, teleport_coords)
         --else
         --    if config.allow_teleport_on_foot then
-                teleport_player_to_coords(pid, teleport_coords.x, teleport_coords.y, teleport_coords.z)
+                players.teleport_2d(pid, teleport_coords.x, teleport_coords.y)
         --    else
         --        cc_utils.help_message(pid, "You must be inside a vehicle to teleport")
         --        return
