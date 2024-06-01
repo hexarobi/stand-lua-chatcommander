@@ -495,6 +495,7 @@ local constants = {
         BENNY2 = 9,
         F1 = 10,
         STREET = 11,
+        TRACK = 12,
     },
 
     VEHICLE_PAINT_TYPES = {
