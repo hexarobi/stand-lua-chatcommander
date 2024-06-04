@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.14.2"
+local SCRIPT_VERSION = "0.15.1"
 
 ---
 --- Auto Updater
@@ -71,9 +71,12 @@ local auto_update_config = {
     },
 }
 
+-- If loading from Stand repository, then rely on it for updates and skip auto-updater
+local is_from_repository = false
+
 util.ensure_package_is_installed('lua/auto-updater')
 local auto_updater = require('auto-updater')
-if auto_updater == true then
+if auto_updater == true and not is_from_repository then
     auto_updater.run_auto_update(auto_update_config)
 end
 
@@ -110,6 +113,9 @@ util.ensure_package_is_installed('lua/inspect')
 local inspect = require("inspect")
 
 util.require_natives("3095a")
+
+-- Constructor lib is required for some commands, so install it from repo if its not already
+util.ensure_package_is_installed('lua/Constructor')
 
 local debug_log = utils.debug_log
 
@@ -464,7 +470,11 @@ end
 local announcements = {
     {
         name="Basic Commands",
-        messages={"Chat commands are now enabled for you! Spawn any vehicle with !name (Ex: !deluxo !op2 !raiju) Keep them with !gift Lose cops with !bail Heal with !autoheal Teleport with !tp Get RP with !levelup Get more help with !help"},
+        messages={
+            "Chat commands are now enabled for you! Spawn any vehicle with !name (Ex: !deluxo !op2 !raiju) "..
+            "Keep them with !gift Lose cops with !bail Heal with !autoheal Teleport with !tp Get RP with !levelup "..
+            "Get more help with !help"
+        },
     },
     {
         name="Roulette",
