@@ -5,6 +5,7 @@ local vehicle_utils = require("chat_commander/vehicle_utils")
 
 return {
     command="repair",
+    command_aliases={"fix"},
     group="vehicle",
     help="Repair any damage done to your current vehicle",
     execute=function(pid, commands)
