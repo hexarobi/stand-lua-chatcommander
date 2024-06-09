@@ -16,9 +16,17 @@ utils.replace_command_character = function(message)
     return message:gsub(" !", " "..chat_control_character)
 end
 
+utils.add_reply_prefix = function(message)
+    local reply_prefix = constants.reply_characters[config.reply_prefix_index][2]
+    if reply_prefix ~= "None" then
+        return reply_prefix .. " " .. message
+    end
+end
+
 local function send_message(pid, message)
     message = utils.replace_command_character(message)
-    if config.send_messages_to_all then
+    message = utils.add_reply_prefix(message)
+    if config.reply_visible_to_all then
         --message = PLAYER.GET_PLAYER_NAME(pid) .. " " .. message
         chat.send_message(message, false, true, true)
         --local say_command_ref = menu.ref_by_path("Online>Chat>Send Message>Send Message")
