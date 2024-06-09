@@ -44,6 +44,6 @@ return {
             memory.read_int(memory.script_global(1916087 + 9)), -- f_8
             memory.read_int(memory.script_global(1916087 + 10)), -- f_9
         })
-        cc_utils.help_message(pid, "Org invite sent. Please check your phone to accept invite.")
+        cc_utils.help_message(pid, "Org invite sent. Please check your phone to accept invite. If you don't see it, leave your CEO/MC and try again.")
     end
 }

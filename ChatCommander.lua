@@ -26,6 +26,7 @@ local auto_update_config = {
         "lib/ChatCommands/other/newlobby.lua",
         "lib/ChatCommands/other/ping.lua",
         "lib/ChatCommands/other/roulette.lua",
+        "lib/ChatCommands/other/blackjack.lua",
         -- Player
         "lib/ChatCommands/player/allguns.lua",
         "lib/ChatCommands/player/ammo.lua",
@@ -436,6 +437,17 @@ local function force_rig_roulette()
     end
 end
 
+local function force_rig_blackjack()
+    local rig_blackjack_menu = menu.ref_by_path("Online>Quick Progress>Casino>Always Win Blackjack")
+    if menu.is_ref_valid(rig_blackjack_menu) then
+        if not rig_blackjack_menu.value then
+            rig_blackjack_menu.value = true
+        end
+    else
+        util.toast("Failed to get command ref to rig blackjack", TOAST_ALL)
+    end
+end
+
 local function afk_casino_tick()
     if not config.afk_in_casino then return end
     if not utils.is_player_in_casino(players.user()) then
@@ -444,6 +456,8 @@ local function afk_casino_tick()
         force_roulette_area()
         force_rig_roulette()
         force_rig_roulette()
+        force_rig_blackjack()
+        force_rig_blackjack()
         --util.request_script_host("casinoroulette")
     end
 end
@@ -477,8 +491,8 @@ local announcements = {
         },
     },
     {
-        name="Roulette",
-        messages={"For anyone that wants money, casino roulette is now rigged to always land on 1. Max bet and win 330k per spin. For VIP access say !vip For more details say !roulette"},
+        name="Casino Money",
+        messages={"For anyone that wants money, casino roulette is now rigged to always land on 1. Max bet and win 330k per spin. Blackjack is also rigged. For VIP access say !vip For more details say !roulette or !blackjack"},
         validator=function()
             return config.afk_mode and utils.is_player_in_casino(players.user())
         end
@@ -1105,7 +1119,7 @@ menus.settings:divider("AFK Options")
 menus.settings:list_select("AFK Lobby Type", {}, "When in AFK mode and alone in a lobby, what type of lobby should you switch to.", constants.lobby_modes, config.lobby_mode_index, function(index)
     config.lobby_mode_index = index
 end)
-menus.settings:toggle("AFK in Casino", {}, "Keep roulette rigged for others while AFK.", function(toggle)
+menus.settings:toggle("AFK in Casino", {}, "Keep roulette and blackjack rigged for others while AFK.", function(toggle)
     config.afk_in_casino = toggle
 end, config.afk_in_casino)
 menus.settings:slider("Min Players in Lobby", {}, "If in AFK mode, will try to stay in a lobby with at least this many players.", 0, 30, config.min_num_players, 1, function(val)
