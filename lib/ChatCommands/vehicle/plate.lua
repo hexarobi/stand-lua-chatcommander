@@ -6,7 +6,7 @@ local vehicle_utils = require("chat_commander/vehicle_utils")
 return {
     command="plate",
     group="vehicle",
-    help="Set the vehicle plate text",
+    help="Set the vehicle plate text. Example: !plate 2FAST4U",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
         if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then

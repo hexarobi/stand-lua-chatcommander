@@ -11,7 +11,7 @@ local config = {
         arena = { x = -381.53763, y = -1871.6571, z = 20.25674 },
         beach = { x = -1938.2361, y = -745.7929, z = 3.0065336 },
         carmeet = { x = 781.38837, y = -1893.78, z = 28.879707 },
-        casino = { x = 922.69604, y = 47.10072, z = 81.10637 },
+        casino = { x = 898.7147, y = 20.985992, z = 81.10637 },
         chiliad = { x = 497.87296, y = 5594.12, z = 794.66626 },
         docks = { x = 816.03735, y = -2933.1458, z = 5.635548 },
         downtown = { x = 19.834902, y = -745.57104, z = 43.92299 },
@@ -35,6 +35,7 @@ local config = {
         videogeddon = { x = 709.92834, y = -831.8337, z = 24.115917 },
         vinewood = { x = 226.5897, y = 209.1123, z = 105.52663 },
         west = { x = -1378.9878, y = -537.43, z = 30.134169 },
+		lsc = { x = -368.0373, y = -131.55637, z = 40.000000 },
         zancudo = { x = -2285.87, y = 3124.1968, z = 32.81467 },
     },
     teleport_aliases = {
@@ -46,6 +47,7 @@ local config = {
         vanilla = "strip",
         video = "videogeddon",
         strip = "stripclub",
+		mechanic = "lsc"
     },
 }
 
@@ -89,7 +91,7 @@ return {
     command="teleport",
     additional_commands={"tp"},
     group="player",
-    help="Teleport to a stunt jump location.",
+    help="Teleport to a select location. Select a waypoint, or a player, or do !tp list for a list of locations.",
     execute=function(pid, commands)
         local command = commands[2]
         local teleport_coords
