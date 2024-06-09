@@ -19,8 +19,9 @@ end
 utils.add_reply_prefix = function(message)
     local reply_prefix = constants.reply_characters[config.reply_prefix_index][2]
     if reply_prefix ~= "None" then
-        return reply_prefix .. " " .. message
+        message = reply_prefix .. " " .. message
     end
+    return message
 end
 
 local function send_message(pid, message)
