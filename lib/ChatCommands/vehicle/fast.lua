@@ -6,7 +6,7 @@ local vehicle_utils = require("chat_commander/vehicle_utils")
 return {
     command="fast",
     group="vehicle",
-    help="",
+    help="Makes your car super fast. Toggle with !fast on/off or set a percentage like !fast 25",
     execute=function(pid, commands)
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
         if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
