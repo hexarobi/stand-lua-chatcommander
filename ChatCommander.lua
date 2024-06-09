@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.15.1r"
+local SCRIPT_VERSION = "0.16r"
 
 ---
 --- Auto Updater
@@ -558,8 +558,8 @@ end
 local function execute_chat_command(pid, commands, chat_command)
     if cc.is_user_allowed_to_issue_chat_command(pid, commands, chat_command) then
         --debug_log("Executing chat command function "..chat_command.name)
-        chat_command.execute(pid, commands, chat_command)
         save_user_command(pid, commands[1])
+        return chat_command.execute(pid, commands, chat_command)
     end
 end
 
@@ -582,7 +582,12 @@ chat.on_message(function(pid, reserved, message_text, is_team_chat, networked, i
         -- Default command if no others apply
         if config.default_chat_command then
             table.insert(commands, 1, config.default_chat_command.command)
-            execute_chat_command(pid, commands, config.default_chat_command)
+            if execute_chat_command(pid, commands, config.default_chat_command) then
+                return
+            end
+        end
+        if config.reply_to_unknown_commands then
+            utils.help_message(pid, "Invalid command. Try !help")
         end
     end
 end)
@@ -904,11 +909,18 @@ add_chat_command_menus()
 ---
 
 menus.announcements = menu.my_root():list("Announcements", {}, "Announcements system for letting others know about commands")
-menus.announcements:action("Announce All", {"announce"}, "Announce all relevant messages", function()
+menus.announcements:action("Announce All", {"announce"}, "Immediately broadcast all relevant announcements", function()
     for _, announcement in ipairs(announcements) do
         announcement.next_announcement_time = nil
     end
 end)
+menus.announcements:toggle("Auto-Announcements", {}, "Automatically broadcast relevant announcements on a repeating schedule.", function(toggle)
+    config.is_auto_announcement_enabled = toggle
+end, config.is_auto_announcement_enabled)
+menus.announcements:slider("Announce Delay", {}, "Set the time interval for when announce will be triggered, in minutes", 30, 120, config.announce_delay, 15, function(value)
+    config.announce_delay = value
+end)
+
 menus.announcements:divider("Announcements")
 for index, announcement in ipairs(announcements) do
     local menu_list = menus.announcements:list(announcement.name, {}, "")
@@ -1035,6 +1047,18 @@ menus.settings:slider("Num Spawns Allowed Per Player", {}, "The maximum number o
     config.num_allowed_spawned_vehicles_per_player = value
 end)
 
+menus.settings:divider("Replies")
+
+menus.settings:list_select("Reply Prefix", {}, "Set the character that your replies will begin with", constants.reply_characters, config.reply_prefix_index, function(index)
+    config.reply_prefix_index = index
+end)
+menus.settings:toggle("Reply to Unknown Commands", {}, "Unknown commands will return a warning reply, instead of just silence", function(toggle)
+    config.reply_to_unknown_commands = toggle
+end, config.reply_to_unknown_commands)
+menus.settings:toggle("Reply Visible to All", {}, "Make replies visible to everyone instead of just to the player that entered the command", function(toggle)
+    config.reply_visible_to_all = toggle
+end, config.reply_visible_to_all)
+
 menus.settings:divider("Authorization")
 
 menus.authorized_for = menus.settings:list("Authorized For", {}, "What users are authorized to issue chat commands. A user must be in at least one allowed group.")
@@ -1087,13 +1111,6 @@ end, config.afk_in_casino)
 menus.settings:slider("Min Players in Lobby", {}, "If in AFK mode, will try to stay in a lobby with at least this many players.", 0, 30, config.min_num_players, 1, function(val)
     config.min_num_players = val
 end, config.min_num_players)
-menus.settings:divider("Announcement Options")
-menus.settings:toggle("Auto-Announcements", {}, "While enabled announcements about available options will be sent to lobby chat on a regular cadence.", function(toggle)
-    config.is_auto_announcement_enabled = toggle
-end, config.is_auto_announcement_enabled)
-menus.settings:slider("Announce Delay", {}, "Set the time interval for when announce will be triggered, in minutes", 30, 120, config.announce_delay, 15, function(value)
-    config.announce_delay = value
-end)
 
 ---
 --- About Menu

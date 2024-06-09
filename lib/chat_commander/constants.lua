@@ -600,6 +600,18 @@ constants.control_characters = {
     {9, "*"},
 }
 
+constants.reply_characters = {
+    {1, "None"},
+    {2, "!"},
+    {3, "?"},
+    {4, "."},
+    {5, "#"},
+    {6, "$"},
+    {7, "*"},
+    {8, "}"},
+    {8, "]"},
+}
+
 constants.lobby_modes = {
     { 1, "Public", {}, "Join an existing public lobby. Will often rejoin the previous session after being dropped." },
     { 2, "New", {}, "Create a new empty public session." },
