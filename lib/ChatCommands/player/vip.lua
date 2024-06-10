@@ -31,6 +31,10 @@ return {
                 cc_utils.help_message(pid, "Sorry, VIP is not available right now.")
             end
         end
+        if players.get_org_type(pid) ~= -1 then
+            cc_utils.help_message(pid, "You are already in an organization. Leave your CEO/MC and try again.")
+            return
+        end
         -- Thanks to Totaw Annihiwation for this script event! // Position - 0x2725D7
         util.trigger_script_event(1 << pid, {
             -245642440,
