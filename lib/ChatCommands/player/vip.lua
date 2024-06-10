@@ -48,6 +48,12 @@ return {
             memory.read_int(memory.script_global(1916087 + 9)), -- f_8
             memory.read_int(memory.script_global(1916087 + 10)), -- f_9
         })
-        cc_utils.help_message(pid, "Org invite sent. Please check your phone to accept invite.")
+        if players.get_org_type(players.user()) == 0 then
+            -- CEO Org
+            cc_utils.help_message(pid, "Org invite sent. For VIP access, please accept the invite on your phones SecuroServ app.")
+        else
+            -- Motorcycle Club
+            cc_utils.help_message(pid, "MC invite sent. For VIP access, please accept the invite on your phones Job List app.")
+        end
     end
 }
