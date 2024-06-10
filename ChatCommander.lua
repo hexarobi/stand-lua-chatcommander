@@ -219,8 +219,15 @@ cc.count_table = function(tbl)
 end
 
 cc.count_chat_commands = function()
-    return cc.count_table(cc.chat_commands)
+    local unique_commands = {}
+    for _, command in pairs(cc.chat_commands) do
+        if not unique_commands[command.command] then
+            unique_commands[command.command] = true
+        end
+    end
+    return #unique_commands
 end
+
 
 cc.add_chat_command = function(command)
     cc.expand_chat_command_defaults(command)
@@ -228,10 +235,15 @@ cc.add_chat_command = function(command)
         util.toast("Error loading chat command: "..command.path.."/"..command.filename..": Command name is already taken")
     else
         cc.chat_commands[command.command] = command
-        --debug_log("Added command "..command.command.." #"..cc.get_num_chat_commands())
+        if command.command_aliases then
+            for _, alias in ipairs(command.command_aliases) do
+                cc.chat_commands[alias] = command
+            end
+        end
     end
     return command
 end
+
 
 cc.refresh_commands_from_files = function(directory, path)
     if path == nil then path = "" end
@@ -264,12 +276,25 @@ cc.expand_chat_command_defaults = function(chat_command, filename, path)
     if chat_command.path == nil then chat_command.path = path or "unknown" end
     if chat_command.name == nil then chat_command.name = chat_command.filename end
     chat_command.allowed_commands = { chat_command.command }
+    if chat_command.command_aliases ~= nil then
+        for _, alias in ipairs(chat_command.command_aliases) do
+            table.insert(chat_command.allowed_commands, alias)
+        end
+    end
+    if chat_command.help == nil then
+        chat_command.help = "No help available."
+    end
+    if type(chat_command.help) == "string" then
+        chat_command.help = { chat_command.help }
+    end
+    if chat_command.command_aliases ~= nil and #chat_command.command_aliases > 0 then
+        table.insert(chat_command.help, "Aliases: " .. table.concat(chat_command.command_aliases, ", "))
+    end
     if chat_command.additional_commands ~= nil then
-        for _, allowed_command in chat_command.additional_commands do
+        for _, allowed_command in ipairs(chat_command.additional_commands) do
             table.insert(chat_command.allowed_commands, allowed_command)
         end
     end
-    -- If authorized_for isn't set at all, then default all to on
     if chat_command.authorized_for == nil then
         chat_command.authorized_for = {
             me = true,
@@ -278,11 +303,11 @@ cc.expand_chat_command_defaults = function(chat_command, filename, path)
             blessed = true,
         }
     end
-    -- If authorized_for is set, but certain keys are not, then default missing keys to off
     if chat_command.authorized_for.me == nil then chat_command.authorized_for.me = false end
     if chat_command.authorized_for.friends == nil then chat_command.authorized_for.friends = false end
     if chat_command.authorized_for.everyone == nil then chat_command.authorized_for.everyone = false end
     if chat_command.authorized_for.blessed == nil then chat_command.authorized_for.blessed = false end
+    chat_command.menu_added = false -- Initialize the flag to check if menu has been added
 end
 
 ---
@@ -547,23 +572,17 @@ end
 ---
 
 local function is_command_matched(commands, chat_command)
-    --debug_log("Checking for '"..tostring(commands[1]).."' in allowed commands: "..inspect(chat_command.allowed_commands))
-    if commands[1] == chat_command.command:lower() then
-        return true
-    end
-    if chat_command.allowed_commands then
-        for _, command_alias in pairs(chat_command.allowed_commands) do
-            if commands[1] == command_alias:lower() then
-                return true
-            end
+    for _, allowed_command in ipairs(chat_command.allowed_commands) do
+        if commands[1] == allowed_command:lower() then
+            return true
         end
     end
     return false
 end
 
 cc.find_chat_command = function(raw_command)
-    for _, chat_command in cc.chat_commands do
-        if chat_command.command == raw_command:lower() then
+    for _, chat_command in pairs(cc.chat_commands) do
+        if is_command_matched({raw_command}, chat_command) then
             return chat_command
         end
     end
@@ -816,6 +835,9 @@ local function get_menu_action_help(chat_command_options)
 end
 
 local function add_chat_command_to_menu(root_menu, chat_command)
+    if chat_command.menu_added then
+        return
+    end
     if chat_command.menu ~= nil then
         return root_menu:link(chat_command.menu)
     end
@@ -831,9 +853,6 @@ local function add_chat_command_to_menu(root_menu, chat_command)
             return utils.help_message(pid, chat_command.help)
         end
     end)
-    --menu.list_select(menu_list, "Allowed", {}, "", config.allowed_options, chat_command.allowed, function(index)
-    --    chat_command.allowed = index
-    --end)
     if chat_command.is_enabled == nil then chat_command.is_enabled = true end
     chat_command.menu:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
         chat_command.is_enabled = toggle
@@ -857,6 +876,7 @@ local function add_chat_command_to_menu(root_menu, chat_command)
         chat_command.menu:divider("Config")
         chat_command.config_menu(chat_command.menu)
     end
+    chat_command.menu_added = true -- Set the flag to true after adding the menu
     return chat_command.menu
 end
 
