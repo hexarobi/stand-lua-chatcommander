@@ -230,16 +230,17 @@ end
 
 
 cc.add_chat_command = function(command)
-    cc.expand_chat_command_defaults(command)
-    if command.command and cc.chat_commands[command.command] ~= nil then
-        util.toast("Error loading chat command: "..command.path.."/"..command.filename..": Command name is already taken")
-    else
+    -- Check if command already exists to avoid duplicate expansions
+    if cc.chat_commands[command.command] == nil then
+        cc.expand_chat_command_defaults(command)
         cc.chat_commands[command.command] = command
         if command.command_aliases then
             for _, alias in ipairs(command.command_aliases) do
                 cc.chat_commands[alias] = command
             end
         end
+    else
+        util.toast("Error loading chat command: "..command.path.."/"..command.filename..": Command name is already taken")
     end
     return command
 end
@@ -287,8 +288,10 @@ cc.expand_chat_command_defaults = function(chat_command, filename, path)
     if type(chat_command.help) == "string" then
         chat_command.help = { chat_command.help }
     end
-    if chat_command.command_aliases ~= nil and #chat_command.command_aliases > 0 then
+    -- Ensure alias information is appended only once
+    if chat_command.command_aliases ~= nil and #chat_command.command_aliases > 0 and not chat_command.aliases_added then
         table.insert(chat_command.help, "Aliases: " .. table.concat(chat_command.command_aliases, ", "))
+        chat_command.aliases_added = true
     end
     if chat_command.additional_commands ~= nil then
         for _, allowed_command in ipairs(chat_command.additional_commands) do
@@ -791,7 +794,7 @@ cc.add_chat_command({
         local groups = {}
         local group_commands = {}
         if type(commands) == "table" then
-            for _, chat_command in cc.chat_commands do
+            for _, chat_command in pairs(cc.chat_commands) do
                 if commands[2] == chat_command.command then
                     utils.help_message(pid, chat_command.help)
                     return
