@@ -246,7 +246,8 @@ vehicle_utils.spawn_vehicle_for_player = function(pid, model_name, offset)
         local vehicle = entities.create_vehicle(model, pos, heading)
         STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model)
         vehicle_utils.spawn_for_player(pid, vehicle)
-        cc_utils.help_message(pid, "Spawning "..model_name)
+        local display_name = util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(model))
+        cc_utils.help_message(pid, "Spawning ".. display_name)
         return vehicle
     end
 end
