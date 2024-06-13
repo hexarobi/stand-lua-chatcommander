@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.17.1"
+local SCRIPT_VERSION = "0.17.2"
 
 ---
 --- Auto Updater
@@ -820,12 +820,18 @@ local function add_chat_command_to_menu(root_menu, chat_command)
     chat_command.menu = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
     chat_command.menu:divider(chat_command.name)
     chat_command.menu:action("Run", {chat_command.override_action_command or chat_command.name}, "Immediately trigger this command for yourself. Ignores all restrictions.", function(click_type, pid)
-        if chat_command.execute ~= nil then
+        if chat_command.execute == nil then
+            util.toast("No executable function found for chat command `"..chat_command.name.."`")
+        else
+            util.toast("Triggering chat command `"..chat_command.name.."`")
             return chat_command.execute(pid, {chat_command.name}, chat_command)
         end
     end)
     chat_command.menu:action("Help", {}, "Immediately trigger the help option for this command.", function(click_type, pid)
-        if chat_command.help ~= nil then
+        if chat_command.help == nil then
+            util.toast("No help found for chat command `"..chat_command.name.."`")
+        else
+            util.toast("Triggering help for chat command `"..chat_command.name.."`")
             return utils.help_message(pid, chat_command.help)
         end
     end)
