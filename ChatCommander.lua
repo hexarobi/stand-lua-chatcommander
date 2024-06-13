@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.17"
+local SCRIPT_VERSION = "0.17.1"
 
 ---
 --- Auto Updater
@@ -819,19 +819,16 @@ local function add_chat_command_to_menu(root_menu, chat_command)
     end
     chat_command.menu = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
     chat_command.menu:divider(chat_command.name)
-    chat_command.menu:action("Run", {chat_command.override_action_command or chat_command.name}, get_menu_action_help(chat_command), function(click_type, pid)
+    chat_command.menu:action("Run", {chat_command.override_action_command or chat_command.name}, "Immediately trigger this command for yourself. Ignores all restrictions.", function(click_type, pid)
         if chat_command.execute ~= nil then
             return chat_command.execute(pid, {chat_command.name}, chat_command)
         end
     end)
-    chat_command.menu:action("Help", {}, get_menu_action_help(chat_command), function(click_type, pid)
+    chat_command.menu:action("Help", {}, "Immediately trigger the help option for this command.", function(click_type, pid)
         if chat_command.help ~= nil then
             return utils.help_message(pid, chat_command.help)
         end
     end)
-    --menu.list_select(menu_list, "Allowed", {}, "", config.allowed_options, chat_command.allowed, function(index)
-    --    chat_command.allowed = index
-    --end)
     if chat_command.is_enabled == nil then chat_command.is_enabled = true end
     chat_command.menu:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
         chat_command.is_enabled = toggle
