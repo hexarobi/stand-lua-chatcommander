@@ -131,6 +131,11 @@ vehicle_utils.request_control = function(entity, timeout)
     return vehicle_utils.request_control_once(entity)
 end
 
+vehicle_utils.is_player_in_vehicle = function(pid)
+    local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+    return PED.IS_PED_IN_ANY_VEHICLE(target_ped, false)
+end
+
 ---
 --- Teleport
 ---
