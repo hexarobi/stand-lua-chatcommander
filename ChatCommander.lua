@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.17.2"
+local SCRIPT_VERSION = "0.17.3"
 
 ---
 --- Auto Updater
@@ -819,7 +819,7 @@ local function add_chat_command_to_menu(root_menu, chat_command)
     end
     chat_command.menu = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
     chat_command.menu:divider(chat_command.name)
-    chat_command.menu:action("Run", {chat_command.override_action_command or chat_command.name}, "Immediately trigger this command for yourself. Ignores all restrictions.", function(click_type, pid)
+    chat_command.menu:action("Execute Command", {chat_command.override_action_command or chat_command.name}, "Immediately trigger this command for yourself. Ignores all restrictions.", function(click_type, pid)
         if chat_command.execute == nil then
             util.toast("No executable function found for chat command `"..chat_command.name.."`")
         else
@@ -827,7 +827,7 @@ local function add_chat_command_to_menu(root_menu, chat_command)
             return chat_command.execute(pid, {chat_command.name}, chat_command)
         end
     end)
-    chat_command.menu:action("Help", {}, "Immediately trigger the help option for this command.", function(click_type, pid)
+    chat_command.menu:action("Execute Command Help", {}, "Immediately trigger the help option for this command.", function(click_type, pid)
         if chat_command.help == nil then
             util.toast("No help found for chat command `"..chat_command.name.."`")
         else
@@ -900,7 +900,11 @@ end
 local function add_chat_command_menus()
     item_browser.browse_item(
         menu.my_root(),
-        {name="Chat Commands", items=build_chat_command_items(), description="Browsable list of all chat commands you have installed"},
+        {
+            name="Chat Commands",
+            items=build_chat_command_items(),
+            description="Browsable list of all chat commands you have installed"
+        },
         add_chat_command_to_menu
     )
 end
@@ -958,8 +962,10 @@ cc.add_passthrough_command_menu = function(passthrough_command)
         save_prefs()
         menus.add_passthrough_command:focus()
     end)
-    for _, main_menu_item in menu.get_children(passthrough_command.menu) do
-        menu.link(passthrough_command.passthrough_menu, main_menu_item)
+    if passthrough_command.menu ~= nil then
+        for _, main_menu_item in menu.get_children(passthrough_command.menu) do
+            menu.link(passthrough_command.passthrough_menu, main_menu_item)
+        end
     end
 end
 
