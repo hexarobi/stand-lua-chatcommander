@@ -252,6 +252,9 @@ vehicle_utils.spawn_vehicle_for_player = function(pid, model_name, offset)
         STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model)
         vehicle_utils.spawn_for_player(pid, vehicle)
         local display_name = util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(model))
+        if model_name ~= display_name then
+            display_name = display_name .. " ["..model_name.."]"
+        end
         cc_utils.help_message(pid, "Spawning ".. display_name)
         return vehicle
     end
@@ -350,9 +353,42 @@ vehicle_utils.get_random_vehicle_model = function(category)
     end
 end
 
+local spawn_aliases = constants.spawn_aliases
+
+local function inject_automatic_vehicle_spawn_aliases()
+    for _, vehicle in pairs(util.get_vehicles()) do
+        local item = {
+            name = util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(util.joaat(vehicle.name))),
+            model = vehicle.name,
+            class = lang.get_localised(vehicle.class) or "Unknown",
+        }
+        if util.get_label_text(vehicle.manufacturer) ~= "NULL" then
+            item.manufacturer = util.get_label_text(vehicle.manufacturer)
+        else
+            item.manufacturer = ""
+        end
+        local alias_strings = {
+            item.name,
+            item.manufacturer .. item.name,
+        }
+        for alias_index, alias_string in alias_strings do
+            local clean_string = alias_string:gsub('[%p%c%s]', ''):lower()
+            --util.log("Adding vehicle spawn alias "..clean_string)
+            if clean_string ~= "null" then
+                if spawn_aliases[clean_string] == nil then
+                    spawn_aliases[clean_string] = item.model
+                elseif spawn_aliases[clean_string] ~= item.model then
+                    --util.log("Alias collision avoided. "..clean_string.." ~= "..item.model)
+                end
+            end
+        end
+    end
+end
+inject_automatic_vehicle_spawn_aliases()
+
 vehicle_utils.apply_vehicle_model_name_shortcuts = function(vehicle_model_name)
-    if constants.spawn_aliases[vehicle_model_name] then
-        return constants.spawn_aliases[vehicle_model_name]
+    if spawn_aliases[vehicle_model_name] then
+        return spawn_aliases[vehicle_model_name]
     end
     return vehicle_model_name
 end
