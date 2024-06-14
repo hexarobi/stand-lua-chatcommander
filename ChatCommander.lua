@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.17.3"
+local SCRIPT_VERSION = "0.18"
 
 ---
 --- Auto Updater
@@ -103,6 +103,8 @@ local preferences = {
 --- Dependencies
 ---
 
+util.require_natives("3095a")
+
 local constants = require("chat_commander/constants")
 local utils = require("chat_commander/utils")
 local vehicle_utils = require("chat_commander/vehicle_utils")
@@ -112,8 +114,6 @@ local user_db = require("chat_commander/user_database")
 
 util.ensure_package_is_installed('lua/inspect')
 local inspect = require("inspect")
-
-util.require_natives("3095a")
 
 -- Constructor lib is required for some commands, so install it from repo if its not already
 util.ensure_package_is_installed('lua/Constructor')
@@ -136,7 +136,9 @@ local function clean_prefs(real_preferences)
     local cleaned_prefs = {}
     for key, value in real_preferences do
         if type(value) == "table" then
-            cleaned_prefs[key] = clean_prefs(value)
+            if key ~= "menus" then
+                cleaned_prefs[key] = clean_prefs(value)
+            end
         elseif type(value) == "string" or type(value) == "number" or type(value) == "boolean" then
             cleaned_prefs[key] = value
         else
@@ -263,6 +265,7 @@ cc.expand_chat_command_defaults = function(chat_command, filename, path)
     if chat_command.filename == nil then chat_command.filename = filename or chat_command.command end
     if chat_command.path == nil then chat_command.path = path or "unknown" end
     if chat_command.name == nil then chat_command.name = chat_command.filename end
+    if chat_command.menus == nil then chat_command.menus = {} end
     chat_command.allowed_commands = { chat_command.command }
     if chat_command.additional_commands ~= nil then
         for _, allowed_command in chat_command.additional_commands do
@@ -814,12 +817,15 @@ local function get_menu_action_help(chat_command_options)
 end
 
 local function add_chat_command_to_menu(root_menu, chat_command)
-    if chat_command.menu ~= nil then
-        return root_menu:link(chat_command.menu)
+    if not menu.is_ref_valid(root_menu) then error("Error adding chat command to menu: Invalid root menu reference") end
+    if chat_command.menus.root ~= nil then
+        if menu.is_ref_valid(chat_command.menus.root) then
+            return root_menu:link(chat_command.menus.root)
+        end
     end
-    chat_command.menu = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
-    chat_command.menu:divider(chat_command.name)
-    chat_command.menu:action("Execute Command", {chat_command.override_action_command or chat_command.name}, "Immediately trigger this command for yourself. Ignores all restrictions.", function(click_type, pid)
+    chat_command.menus.root = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
+    chat_command.menus.root:divider(chat_command.name)
+    chat_command.menus.root:action("Execute Command", {chat_command.override_action_command or chat_command.name}, "Immediately trigger this command for yourself. Ignores all restrictions.", function(click_type, pid)
         if chat_command.execute == nil then
             util.toast("No executable function found for chat command `"..chat_command.name.."`")
         else
@@ -827,7 +833,7 @@ local function add_chat_command_to_menu(root_menu, chat_command)
             return chat_command.execute(pid, {chat_command.name}, chat_command)
         end
     end)
-    chat_command.menu:action("Execute Command Help", {}, "Immediately trigger the help option for this command.", function(click_type, pid)
+    chat_command.menus.root:action("Execute Command Help", {}, "Immediately trigger the help option for this command.", function(click_type, pid)
         if chat_command.help == nil then
             util.toast("No help found for chat command `"..chat_command.name.."`")
         else
@@ -836,29 +842,29 @@ local function add_chat_command_to_menu(root_menu, chat_command)
         end
     end)
     if chat_command.is_enabled == nil then chat_command.is_enabled = true end
-    chat_command.menu:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
+    chat_command.menus.root:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
         chat_command.is_enabled = toggle
     end, chat_command.is_enabled)
 
-    chat_command.authorized_for_menu = chat_command.menu:list("Special Authorization For", {}, "To use this command a user must have general authorization, and be in at least one specially authorized group.")
-    chat_command.authorized_for_menu:toggle("Me", {}, "Yourself", function(toggle)
+    chat_command.menus.authorized_for_menu = chat_command.menus.root:list("Special Authorization For", {}, "To use this command a user must have general authorization, and be in at least one specially authorized group.")
+    chat_command.menus.authorized_for_menu:toggle("Me", {}, "Yourself", function(toggle)
         chat_command.authorized_for.me = toggle
     end, chat_command.authorized_for.me)
-    chat_command.authorized_for_menu:toggle("Friends", {}, "People on your friends list", function(toggle)
+    chat_command.menus.authorized_for_menu:toggle("Friends", {}, "People on your friends list", function(toggle)
         chat_command.authorized_for.friends = toggle
     end, chat_command.authorized_for.friends)
-    chat_command.authorized_for_menu:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
+    chat_command.menus.authorized_for_menu:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
         chat_command.authorized_for.everyone = toggle
     end, chat_command.authorized_for.everyone)
-    chat_command.authorized_for_menu:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
+    chat_command.menus.authorized_for_menu:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
         chat_command.authorized_for.blessed = toggle
     end, chat_command.authorized_for.blessed)
 
     if chat_command.config_menu ~= nil then
-        chat_command.menu:divider("Config")
-        chat_command.config_menu(chat_command.menu)
+        chat_command.menus.root:divider("Config")
+        chat_command.config_menu(chat_command.menus.root)
     end
-    return chat_command.menu
+    return chat_command.menus.root
 end
 
 local function sort_items_by_name(items)
@@ -936,16 +942,16 @@ end, "")
 
 cc.add_passthrough_command_menu = function(passthrough_command)
     local menu_id = get_unique_menu_id()
-    passthrough_command.passthrough_menu = menus.passthrough_commands:list(passthrough_command.command or "unknown", {}, "")
-    passthrough_command.passthrough_menu:text_input("Inbound Command", { "ccpassthruinbound"..menu_id}, "The chat command that triggers this action", function(value)
+    passthrough_command.menus.passthrough_menu = menus.passthrough_commands:list(passthrough_command.command or "unknown", {}, "")
+    passthrough_command.menus.passthrough_menu:text_input("Inbound Command", { "ccpassthruinbound"..menu_id}, "The chat command that triggers this action", function(value)
         passthrough_command.command = value
         save_prefs()
     end, passthrough_command.command or "")
-    passthrough_command.passthrough_menu:text_input("Outbound Command", { "ccpassthruoutbound"..menu_id}, "The stand command that should be triggered by this action", function(value)
+    passthrough_command.menus.passthrough_menu:text_input("Outbound Command", { "ccpassthruoutbound"..menu_id}, "The stand command that should be triggered by this action", function(value)
         passthrough_command.outbound_command = value
         save_prefs()
     end, passthrough_command.outbound_command or "")
-    passthrough_command.passthrough_menu:text_input("Help Text", { "ccpassthruhelp"..menu_id}, "The help text for this action", function(value)
+    passthrough_command.menus.passthrough_menu:text_input("Help Text", { "ccpassthruhelp"..menu_id}, "The help text for this action", function(value)
         passthrough_command.help = value
         save_prefs()
     end, passthrough_command.help or "")
@@ -953,18 +959,18 @@ cc.add_passthrough_command_menu = function(passthrough_command)
     --    passthrough_command.group = value
     --    save_prefs()
     --end, passthrough_command.group or "other")
-    passthrough_command.passthrough_menu:toggle("Requires Player Name", {}, "Some Stand commands are player-specific. Check this box to automatically include the name of the player that issued the command.", function(value)
+    passthrough_command.menus.passthrough_menu:toggle("Requires Player Name", {}, "Some Stand commands are player-specific. Check this box to automatically include the name of the player that issued the command.", function(value)
         passthrough_command.outbound_command_requires_player_name = value
         save_prefs()
     end, passthrough_command.outbound_command_requires_player_name)
-    passthrough_command.passthrough_menu:action("Delete", {}, "Delete this passthrough command", function()
+    passthrough_command.menus.passthrough_menu:action("Delete", {}, "Delete this passthrough command", function()
         cc.delete_passthrough_command(passthrough_command)
         save_prefs()
         menus.add_passthrough_command:focus()
     end)
-    if passthrough_command.menu ~= nil then
-        for _, main_menu_item in menu.get_children(passthrough_command.menu) do
-            menu.link(passthrough_command.passthrough_menu, main_menu_item)
+    if passthrough_command.menus.root ~= nil then
+        for _, main_menu_item in menu.get_children(passthrough_command.menus.root) do
+            menu.link(passthrough_command.menus.passthrough_menu, main_menu_item)
         end
     end
 end
@@ -974,8 +980,11 @@ cc.delete_passthrough_command = function(deleted_command)
         if passthrough_command.command == deleted_command.command then
             debug_log("Deleting passthrough command "..deleted_command.command)
             preferences.passthrough_commands[key] = nil
-            if passthrough_command.menu:isValid() then
-                menu.delete(passthrough_command.menu)
+            if passthrough_command.menus.passthrough_menu and menu.is_ref_valid(passthrough_command.menus.passthrough_menu) then
+                menu.delete(passthrough_command.menus.passthrough_menu)
+            end
+            if passthrough_command.menus.root and menu.is_ref_valid(passthrough_command.menus.root) then
+                menu.delete(passthrough_command.menus.root)
             end
         end
     end
