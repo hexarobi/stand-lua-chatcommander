@@ -1,5 +1,5 @@
 -- Item Browser
--- Library for adding a browseable and searchable menu in Stand for heirarchical data (like folders and files)
+-- Library for adding a browsable and searchable menu in Stand for hierarchical data (like folders and files)
 
 local browser = {}
 browser.state = {
@@ -75,53 +75,83 @@ end
 browser.browse_item = function(parent_menu, this_item, add_item_menu_function, browse_params)
     if browse_params == nil then browse_params = {} end
     if this_item.items ~= nil then
-        local menu_list = parent_menu:list(
+        if this_item.menus == nil then this_item.menus = {} end
+        if this_item.menus.root == nil then
+            this_item.menus.root = parent_menu:list(
                 this_item.name.." ("..#this_item.items..")",
                 {},
                 this_item.description or ""
-        )
+            )
+        end
+        -- Search Command
         browser.state.search_menu_counter = browser.state.search_menu_counter + 1
         local search_command = "search"..browser.state.search_menu_counter
-        local search_menu = menu_list:list("Search", {}, "Search this folder and sub-folders", function()
+        local search_menu = this_item.menus.root:list("Search", {}, "Search this folder and sub-folders", function()
             menu.show_command_box(search_command.." ")
         end)
-        search_menu:text_input("Search", {search_command}, "", function(query)
-            delete_menu_list(browser.state.search_results_menus)
-            browser.state.search_results_menus = {}
-            browser.search({
-                this_item=this_item,
-                query=query,
-                results=browser.state.search_results_menus,
-                menus={
-                    root=search_menu,
-                },
-                query_function=function(search_params)
-                    if browse_params.query_function ~= nil then
-                        return browse_params.query_function(search_params)
-                    else
-                        return browser.search_items(search_params.this_item, search_params.query)
-                    end
-                end,
-                add_item_menu_function=function(search_params, item)
-                    if add_item_menu_function ~= nil then
-                        return add_item_menu_function(search_params.menus.root, item)
-                    end
-                end,
-            })
+        search_menu:text_input("Search", {search_command}, "", function(query, click_type)
+            if click_type == CLICK_COMMAND then
+                delete_menu_list(browser.state.search_results_menus)
+                browser.state.search_results_menus = {}
+                browser.search({
+                    this_item=this_item,
+                    query=query,
+                    results=browser.state.search_results_menus,
+                    menus={
+                        root=search_menu,
+                    },
+                    query_function=function(search_params)
+                        if browse_params.query_function ~= nil then
+                            return browse_params.query_function(search_params)
+                        else
+                            return browser.search_items(search_params.this_item, search_params.query)
+                        end
+                    end,
+                    add_item_menu_function=function(search_params, item)
+                        if add_item_menu_function ~= nil then
+                            return add_item_menu_function(search_params.menus.root, item)
+                        end
+                    end,
+                })
+            end
         end)
-        menu_list:divider("Browse")
-        for _, item in pairs(this_item.items) do
-            if type(item) == "table" then
-                if item.items ~= nil then
-                    browser.browse_item(menu_list, item, add_item_menu_function)
-                else
-                    if add_item_menu_function ~= nil then
-                        add_item_menu_function(menu_list, item)
-                    end
+        -- Browse List
+        this_item.menus.root:divider("Browse")
+        browser.browse_items(this_item.menus.root, this_item.items, add_item_menu_function)
+        return this_item.menus.root
+    end
+end
+
+browser.browse_items = function(parent_menu, items, add_item_menu_function)
+    for _, item in pairs(items) do
+        if type(item) == "table" then
+            if item.items ~= nil then
+                browser.browse_item(parent_menu, item, add_item_menu_function)
+            else
+                if add_item_menu_function ~= nil then
+                    add_item_menu_function(parent_menu, item)
                 end
             end
         end
-        return menu_list
+    end
+end
+
+browser.create_items_menu = function(parent_menu, root_item, add_item_menu_function, browse_params)
+    browser.state.root_item = root_item
+    browser.state.add_item_menu_function = add_item_menu_function
+    browser.state.root_item_menu = browser.browse_item(
+        parent_menu,
+        root_item,
+        add_item_menu_function,
+        browse_params
+    )
+    return browser.state.root_item_menu
+end
+
+browser.update_items_menu = function(updated_items)
+    if browser.state.root_item  ~= nil then
+        browser.state.root_item.items = updated_items
+        browser.browse_item(nil, browser.state.root_item, browser.state.add_item_menu_function)
     end
 end
 
