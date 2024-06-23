@@ -154,7 +154,7 @@ end
 --- Spawn Vehicle
 ---
 
-vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_name)
+vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_name, banned_vehicles)
     --cc_utils.debug_log("Spawning vehicle "..vehicle_model_name)
     -- If vehicle model is nil or empty, or is a group name, then get a random vehicle model
     local new_vehicle_model_name = vehicle_utils.get_random_vehicle_model(vehicle_model_name)
@@ -163,6 +163,10 @@ vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_na
     end
     -- If vehicle model is an alias, get the real model name
     vehicle_model_name = vehicle_utils.apply_vehicle_model_name_shortcuts(vehicle_model_name)
+    if banned_vehicles ~= nil and table.contains(banned_vehicles, vehicle_model_name) then
+        util.log("Cannot spawn banned vehicle "..vehicle_model_name)
+        return
+    end
     -- Validate user is allowed to spawn this vehicle
     if vehicle_utils.is_user_allowed_to_spawn_vehicle(pid, vehicle_model_name) then
         local vehicle = vehicle_utils.spawn_vehicle_for_player(pid, vehicle_model_name)
