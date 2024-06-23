@@ -3,9 +3,15 @@
 
 local browser = {}
 browser.state = {
-    search_menu_counter = 1
+    item_counter = 0,
+    search_menu_counter = 1,
 }
 local max_search_results = 100
+
+local function get_unique_item_id()
+    browser.state.item_counter = browser.state.item_counter + 1
+    return browser.state.item_counter
+end
 
 local function delete_menu_list(menu_list)
     if type(menu_list) ~= "table" then return end
@@ -109,6 +115,7 @@ browser.browse_item = function(parent_menu, this_item, add_item_menu_function, b
                     end,
                     add_item_menu_function=function(search_params, item)
                         if add_item_menu_function ~= nil then
+                            if item.item_id == nil then item.item_id = get_unique_item_id() end
                             return add_item_menu_function(search_params.menus.root, item)
                         end
                     end,
@@ -128,6 +135,7 @@ browser.browse_items = function(parent_menu, items, add_item_menu_function)
             if item.items ~= nil then
                 browser.browse_item(parent_menu, item, add_item_menu_function)
             else
+                if item.item_id == nil then item.item_id = get_unique_item_id() end
                 if add_item_menu_function ~= nil then
                     add_item_menu_function(parent_menu, item)
                 end
