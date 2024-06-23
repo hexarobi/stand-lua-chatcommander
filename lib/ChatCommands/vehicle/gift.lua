@@ -40,6 +40,27 @@ local function clear_invisible_vehicles(pid, range)
     end
 end
 
+local function get_new_script_host_player_id(gifting_player_id)
+    for _, player_id in players.list(false) do
+        if player_id ~= gifting_player_id then
+            return player_id
+        end
+    end
+    -- If no one else is in session then make gifter the host
+    return gifting_player_id
+end
+
+local function dont_be_script_host(gifting_player_id)
+    -- Being script host when triggering the gift command can cause players to be kicked out of the car
+    if players.get_script_host() == players.user() then
+        local new_script_host_player_id = get_new_script_host_player_id(gifting_player_id)
+        local host_name = players.get_name(new_script_host_player_id)
+        util.toast("Giving away script host to "..host_name, TOAST_ALL)
+        menu.trigger_commands("givesh"..host_name)
+        util.yield(1000)
+    end
+end
+
 return {
     command="gift",
     group="vehicle",
@@ -50,6 +71,7 @@ return {
         local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
         if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
             clear_invisible_vehicles(pid)
+            dont_be_script_host()
             gift_vehicle_to_player(pid, vehicle)
             cc_utils.help_message(pid, "You may now park this car in a full garage and permanently replace another car. For more help say !help gift")
         end
