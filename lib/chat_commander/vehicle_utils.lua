@@ -131,6 +131,11 @@ vehicle_utils.request_control = function(entity, timeout)
     return vehicle_utils.request_control_once(entity)
 end
 
+vehicle_utils.is_player_in_vehicle = function(pid)
+    local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+    return PED.IS_PED_IN_ANY_VEHICLE(target_ped, false)
+end
+
 ---
 --- Teleport
 ---
@@ -149,7 +154,7 @@ end
 --- Spawn Vehicle
 ---
 
-vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_name)
+vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_name, banned_vehicles)
     --cc_utils.debug_log("Spawning vehicle "..vehicle_model_name)
     -- If vehicle model is nil or empty, or is a group name, then get a random vehicle model
     local new_vehicle_model_name = vehicle_utils.get_random_vehicle_model(vehicle_model_name)
@@ -158,6 +163,10 @@ vehicle_utils.spawn_shuffled_vehicle_for_player = function(pid, vehicle_model_na
     end
     -- If vehicle model is an alias, get the real model name
     vehicle_model_name = vehicle_utils.apply_vehicle_model_name_shortcuts(vehicle_model_name)
+    if banned_vehicles ~= nil and table.contains(banned_vehicles, vehicle_model_name) then
+        util.log("Cannot spawn banned vehicle "..vehicle_model_name)
+        return
+    end
     -- Validate user is allowed to spawn this vehicle
     if vehicle_utils.is_user_allowed_to_spawn_vehicle(pid, vehicle_model_name) then
         local vehicle = vehicle_utils.spawn_vehicle_for_player(pid, vehicle_model_name)
@@ -246,7 +255,11 @@ vehicle_utils.spawn_vehicle_for_player = function(pid, model_name, offset)
         local vehicle = entities.create_vehicle(model, pos, heading)
         STREAMING.SET_MODEL_AS_NO_LONGER_NEEDED(model)
         vehicle_utils.spawn_for_player(pid, vehicle)
-        cc_utils.help_message(pid, "Spawning "..model_name)
+        local display_name = util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(model))
+        if model_name ~= display_name then
+            display_name = display_name .. " ["..model_name.."]"
+        end
+        cc_utils.help_message(pid, "Spawning ".. display_name)
         return vehicle
     end
 end
@@ -299,9 +312,11 @@ local non_car_classes = {
 }
 
 local find_class_name = function(key)
+    --util.log("Checking class name "..key)
     --return lang.get_string(vehicle.class):lower():gsub(" ", ""):gsub("-", "")
     for _, class_key in class_keys do
         if key == util.joaat(class_key) then
+            --util.log("Found class name "..class_key)
             return class_key
         end
     end
@@ -320,13 +335,17 @@ local function build_random_vehicles()
         car={},
     }
     for _, vehicle in util.get_vehicles() do
-        if not cc_utils.is_in(vehicle.name, blocked_random_vehicles) then
+        if not table.contains(blocked_random_vehicles, vehicle.name) then
             table.insert(vehicle_utils.random_vehicles.all, vehicle.name)
             local class_name = find_class_name(vehicle.class)
-            if vehicle_utils.random_vehicles[class_name] == nil then vehicle_utils.random_vehicles[class_name] = {} end
-            table.insert(vehicle_utils.random_vehicles[class_name], vehicle.name)
-            if not cc_utils.is_in(class_name, non_car_classes) then
-                table.insert(vehicle_utils.random_vehicles.car, vehicle.name)
+            if class_name == nil then
+                util.log("Class name is nil for vehicle "..vehicle.name)
+            else
+                if vehicle_utils.random_vehicles[class_name] == nil then vehicle_utils.random_vehicles[class_name] = {} end
+                table.insert(vehicle_utils.random_vehicles[class_name], vehicle.name)
+                if not table.contains(non_car_classes, class_name) then
+                    table.insert(vehicle_utils.random_vehicles.car, vehicle.name)
+                end
             end
         end
     end
@@ -344,9 +363,42 @@ vehicle_utils.get_random_vehicle_model = function(category)
     end
 end
 
+local spawn_aliases = constants.spawn_aliases
+
+local function inject_automatic_vehicle_spawn_aliases()
+    for _, vehicle in pairs(util.get_vehicles()) do
+        local item = {
+            name = util.get_label_text(VEHICLE.GET_DISPLAY_NAME_FROM_VEHICLE_MODEL(util.joaat(vehicle.name))),
+            model = vehicle.name,
+            class = lang.get_localised(vehicle.class) or "Unknown",
+        }
+        if util.get_label_text(vehicle.manufacturer) ~= "NULL" then
+            item.manufacturer = util.get_label_text(vehicle.manufacturer)
+        else
+            item.manufacturer = ""
+        end
+        local alias_strings = {
+            item.name,
+            item.manufacturer .. item.name,
+        }
+        for alias_index, alias_string in alias_strings do
+            local clean_string = alias_string:gsub('[%p%c%s]', ''):lower()
+            --util.log("Adding vehicle spawn alias "..clean_string)
+            if clean_string ~= "null" then
+                if spawn_aliases[clean_string] == nil then
+                    spawn_aliases[clean_string] = item.model
+                elseif spawn_aliases[clean_string] ~= item.model then
+                    --util.log("Alias collision avoided. "..clean_string.." ~= "..item.model)
+                end
+            end
+        end
+    end
+end
+inject_automatic_vehicle_spawn_aliases()
+
 vehicle_utils.apply_vehicle_model_name_shortcuts = function(vehicle_model_name)
-    if constants.spawn_aliases[vehicle_model_name] then
-        return constants.spawn_aliases[vehicle_model_name]
+    if spawn_aliases[vehicle_model_name] then
+        return spawn_aliases[vehicle_model_name]
     end
     return vehicle_model_name
 end

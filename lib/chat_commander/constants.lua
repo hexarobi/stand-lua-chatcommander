@@ -449,6 +449,8 @@ local constants = {
         ver = "verlierer2",
         lacoureuse = "coureur",
         delorean = "deluxo",
+        kreiger = "krieger",
+        jetski = "seashark",
     },
 
     VEHICLE_MAX_OPTIONS = {

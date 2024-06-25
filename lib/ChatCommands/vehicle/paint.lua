@@ -5,7 +5,7 @@ local vehicle_utils = require("chat_commander/vehicle_utils")
 
 return {
     command="paint",
-    command_aliases={"color"},
+    additional_commands={"color"},
     group="vehicle",
 	help="Paint the vehicle. Accepts color names or exact hexcodes. !paint blue, !paint #ff3344",
     execute=function(pid, commands)

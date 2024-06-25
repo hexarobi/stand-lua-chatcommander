@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.16r"
+local SCRIPT_VERSION = "0.19.1"
 
 ---
 --- Auto Updater
@@ -26,6 +26,7 @@ local auto_update_config = {
         "lib/ChatCommands/other/newlobby.lua",
         "lib/ChatCommands/other/ping.lua",
         "lib/ChatCommands/other/roulette.lua",
+        "lib/ChatCommands/other/blackjack.lua",
         -- Player
         "lib/ChatCommands/player/allguns.lua",
         "lib/ChatCommands/player/ammo.lua",
@@ -72,7 +73,7 @@ local auto_update_config = {
 }
 
 -- If loading from Stand repository, then rely on it for updates and skip auto-updater
-local is_from_repository = true
+local is_from_repository = false
 
 util.ensure_package_is_installed('lua/auto-updater')
 local auto_updater = require('auto-updater')
@@ -102,6 +103,8 @@ local preferences = {
 --- Dependencies
 ---
 
+util.require_natives("3095a")
+
 local constants = require("chat_commander/constants")
 local utils = require("chat_commander/utils")
 local vehicle_utils = require("chat_commander/vehicle_utils")
@@ -111,8 +114,6 @@ local user_db = require("chat_commander/user_database")
 
 util.ensure_package_is_installed('lua/inspect')
 local inspect = require("inspect")
-
-util.require_natives("3095a")
 
 -- Constructor lib is required for some commands, so install it from repo if its not already
 util.ensure_package_is_installed('lua/Constructor')
@@ -135,7 +136,9 @@ local function clean_prefs(real_preferences)
     local cleaned_prefs = {}
     for key, value in real_preferences do
         if type(value) == "table" then
-            cleaned_prefs[key] = clean_prefs(value)
+            if key ~= "menus" then
+                cleaned_prefs[key] = clean_prefs(value)
+            end
         elseif type(value) == "string" or type(value) == "number" or type(value) == "boolean" then
             cleaned_prefs[key] = value
         else
@@ -262,6 +265,7 @@ cc.expand_chat_command_defaults = function(chat_command, filename, path)
     if chat_command.filename == nil then chat_command.filename = filename or chat_command.command end
     if chat_command.path == nil then chat_command.path = path or "unknown" end
     if chat_command.name == nil then chat_command.name = chat_command.filename end
+    if chat_command.menus == nil then chat_command.menus = {} end
     chat_command.allowed_commands = { chat_command.command }
     if chat_command.additional_commands ~= nil then
         for _, allowed_command in chat_command.additional_commands do
@@ -436,6 +440,17 @@ local function force_rig_roulette()
     end
 end
 
+local function force_rig_blackjack()
+    local rig_blackjack_menu = menu.ref_by_path("Online>Quick Progress>Casino>Always Win Blackjack")
+    if menu.is_ref_valid(rig_blackjack_menu) then
+        if not rig_blackjack_menu.value then
+            rig_blackjack_menu.value = true
+        end
+    else
+        util.toast("Failed to get command ref to rig blackjack", TOAST_ALL)
+    end
+end
+
 local function afk_casino_tick()
     if not config.afk_in_casino then return end
     if not utils.is_player_in_casino(players.user()) then
@@ -443,7 +458,7 @@ local function afk_casino_tick()
     else
         force_roulette_area()
         force_rig_roulette()
-        force_rig_roulette()
+        force_rig_blackjack()
         --util.request_script_host("casinoroulette")
     end
 end
@@ -477,8 +492,8 @@ local announcements = {
         },
     },
     {
-        name="Roulette",
-        messages={"For anyone that wants money, casino roulette is now rigged to always land on 1. Max bet and win 330k per spin. For VIP access say !vip For more details say !roulette"},
+        name="Casino Money",
+        messages={"For anyone that wants money, casino roulette is now rigged to always land on 1. Max bet and win 330k per spin. Blackjack is also rigged. For VIP access say !vip For more details say !roulette or !blackjack"},
         validator=function()
             return config.afk_mode and utils.is_player_in_casino(players.user())
         end
@@ -650,16 +665,22 @@ end
 --- PassThrough Commands Handler
 ---
 
+cc.add_extended_command = function(extended_command)
+    if extended_command.group == nil then
+        extended_command.group = "other"
+    end
+    extended_command.override_action_command = "ccextend"..extended_command.command  -- Prefix pass through commands for uniqueness to avoid loop
+    cc.expand_chat_command_defaults(extended_command, extended_command.command, "ccextend")
+    local command = cc.add_chat_command(extended_command)
+    return command
+end
+
 cc.add_passthrough_command = function(passthrough_command)
     if type(passthrough_command) ~= "table" then
         passthrough_command = {command=passthrough_command}
     end
-    if passthrough_command.group == nil then
-        passthrough_command.group = "other"
-    end
-    passthrough_command.override_action_command = "ccpassthrough"..passthrough_command.command  -- Prefix pass through commands for uniqueness to avoid loop
-    cc.expand_chat_command_defaults(passthrough_command, passthrough_command.command, "ccpassthrough")
-    return cc.add_chat_command(passthrough_command)
+    passthrough_command.group = "passthrough"
+    return cc.add_extended_command(passthrough_command)
 end
 
 cc.attach_execute_to_passthrough_command = function(passthrough_command)
@@ -686,8 +707,6 @@ cc.refresh_passthrough_commands = function()
         cc.add_passthrough_command(passthrough_command)
     end
 end
-
-cc.refresh_passthrough_commands()
 
 ---
 --- Constructor Spawnable Constructs Passthrough Commands
@@ -727,10 +746,11 @@ end
 
 cc.refresh_construct_passthrough_commands = function()
     for _, spawnable_name in pairs(load_all_spawnable_names_from_dir(SPAWNABLE_DIR)) do
-        cc.add_construct_passthrough_command(
+        cc.add_extended_command(
             {
                 command=spawnable_name,
                 help="Spawn a "..spawnable_name,
+                group="constructs",
                 outbound_command=spawnable_name,
                 outbound_command_requires_player_name=true,
             }
@@ -738,7 +758,6 @@ cc.refresh_construct_passthrough_commands = function()
     end
 end
 
-cc.refresh_construct_passthrough_commands()
 
 ---
 --- Help
@@ -801,49 +820,55 @@ local function get_menu_action_help(chat_command_options)
     return chat_command_options.help
 end
 
-local function add_chat_command_to_menu(root_menu, chat_command)
-    if chat_command.menu ~= nil then
-        return root_menu:link(chat_command.menu)
-    end
-    chat_command.menu = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
-    chat_command.menu:divider(chat_command.name)
-    chat_command.menu:action("Run", {chat_command.override_action_command or chat_command.name}, get_menu_action_help(chat_command), function(click_type, pid)
-        if chat_command.execute ~= nil then
+local function add_chat_command_options_to_menu(root_menu, chat_command)
+    root_menu:action("Execute Command", {chat_command.override_action_command or chat_command.name}, "Immediately trigger this command for yourself. Ignores all restrictions.", function(click_type, pid)
+        if chat_command.execute == nil then
+            util.toast("No executable function found for chat command `"..chat_command.name.."`")
+        else
+            util.toast("Triggering chat command `"..chat_command.name.."`")
             return chat_command.execute(pid, {chat_command.name}, chat_command)
         end
     end)
-    chat_command.menu:action("Help", {}, get_menu_action_help(chat_command), function(click_type, pid)
-        if chat_command.help ~= nil then
+    root_menu:action("Execute Command Help", {}, "Immediately trigger the help option for this command.", function(click_type, pid)
+        if chat_command.help == nil then
+            util.toast("No help found for chat command `"..chat_command.name.."`")
+        else
+            util.toast("Triggering help for chat command `"..chat_command.name.."`")
             return utils.help_message(pid, chat_command.help)
         end
     end)
-    --menu.list_select(menu_list, "Allowed", {}, "", config.allowed_options, chat_command.allowed, function(index)
-    --    chat_command.allowed = index
-    --end)
     if chat_command.is_enabled == nil then chat_command.is_enabled = true end
-    chat_command.menu:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
+    root_menu:toggle("Enabled", {}, "Is this command currently active and usable by other players", function(toggle)
         chat_command.is_enabled = toggle
     end, chat_command.is_enabled)
 
-    chat_command.authorized_for_menu = chat_command.menu:list("Enabled For", {}, "What users are authorized to issue chat commands. A user must be in at least one allowed group.")
-    chat_command.authorized_for_menu:toggle("Me", {}, "Yourself", function(toggle)
+    chat_command.menus.authorized_for_menu = root_menu:list("Special Authorization For", {}, "To use this command a user must have general authorization, and be in at least one specially authorized group.")
+    chat_command.menus.authorized_for_menu:toggle("Me", {}, "Yourself", function(toggle)
         chat_command.authorized_for.me = toggle
     end, chat_command.authorized_for.me)
-    chat_command.authorized_for_menu:toggle("Friends", {}, "People on your friends list", function(toggle)
+    chat_command.menus.authorized_for_menu:toggle("Friends", {}, "People on your friends list", function(toggle)
         chat_command.authorized_for.friends = toggle
     end, chat_command.authorized_for.friends)
-    chat_command.authorized_for_menu:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
+    chat_command.menus.authorized_for_menu:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
         chat_command.authorized_for.everyone = toggle
     end, chat_command.authorized_for.everyone)
-    chat_command.authorized_for_menu:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
+    chat_command.menus.authorized_for_menu:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
         chat_command.authorized_for.blessed = toggle
     end, chat_command.authorized_for.blessed)
+end
+
+local function add_chat_command_to_menu(root_menu, chat_command)
+    if not menu.is_ref_valid(root_menu) then error("Error adding chat command to menu: Invalid root menu reference") end
+    chat_command.menus.root = root_menu:list(chat_command.name, {}, get_menu_action_help(chat_command))
+    chat_command.menus.root:divider(chat_command.name)
+
+    add_chat_command_options_to_menu(chat_command.menus.root, chat_command)
 
     if chat_command.config_menu ~= nil then
-        chat_command.menu:divider("Config")
-        chat_command.config_menu(chat_command.menu)
+        chat_command.menus.root:divider("Config")
+        chat_command.config_menu(chat_command.menus.root)
     end
-    return chat_command.menu
+    return chat_command.menus.root
 end
 
 local function sort_items_by_name(items)
@@ -863,13 +888,15 @@ local function build_chat_command_items()
     local chat_commands_by_group = {}
     for _, chat_command in cc.chat_commands do
         if chat_command.group == nil then chat_command.group = "ungrouped" end
-        if chat_commands_by_group[chat_command.group] == nil then
-            chat_commands_by_group[chat_command.group] = {
-                name=chat_command.group,
-                items={},
-            }
+        if chat_command.group ~= "passthrough" then
+            if chat_commands_by_group[chat_command.group] == nil then
+                chat_commands_by_group[chat_command.group] = {
+                    name=chat_command.group,
+                    items={},
+                }
+            end
+            table.insert(chat_commands_by_group[chat_command.group].items, chat_command)
         end
-        table.insert(chat_commands_by_group[chat_command.group].items, chat_command)
     end
     --debug_log("chat_commands_by_group "..inspect(chat_commands_by_group))
 
@@ -882,27 +909,106 @@ local function build_chat_command_items()
     return chat_command_items
 end
 
-local function add_chat_command_menus()
-    item_browser.browse_item(
+cc.build_chat_commands_menu = function()
+    menus.chat_commands = item_browser.browse_item(
         menu.my_root(),
-        {name="Chat Commands", items=build_chat_command_items(), description="Browsable list of all chat commands you have installed"},
+        {
+            name="Chat Commands",
+            description="Browsable list of all chat commands you have installed",
+            items=build_chat_command_items(),
+        },
         add_chat_command_to_menu
     )
 end
 
 ---
+--- Startup
+---
+
+cc.refresh_passthrough_commands()
+cc.refresh_construct_passthrough_commands()
+
+---
 --- Menu
 ---
 
-menu.toggle(menu.my_root(), "AFK Mode", {"afk"}, "When enabled, will attempt to keep you in an active lobby.", function(toggle)
-    config.afk_mode = toggle
-end, config.afk_mode)
+menus.root = menu.my_root()
 
 ---
 --- Chat Commands Menu
 ---
 
-add_chat_command_menus()
+cc.build_chat_commands_menu()
+
+---
+--- Passthrough Menu
+---
+
+menus.passthrough_commands = menu.my_root():list("Passthrough Commands", {}, "Allow other stand commands to be triggered via chat commands")
+menus.add_passthrough_command = menus.passthrough_commands:text_input("Add Command", {"ccpassthruadd"}, "Add a new passthrough chat command. This can then be configured to trigger another existing Stand command.", function(value)
+    local passthrough_command = cc.add_passthrough_command(value)
+    cc.add_passthrough_command_menu(passthrough_command)
+    table.insert(preferences.passthrough_commands, passthrough_command)
+    save_prefs()
+    menus.add_passthrough_command.value = ""
+    passthrough_command.menus.outbound_command:focus()
+end, "")
+
+cc.add_passthrough_command_menu = function(passthrough_command)
+    local menu_id = get_unique_menu_id()
+    passthrough_command.menus.passthrough_menu = menus.passthrough_commands:list(passthrough_command.command or "unknown", {}, "")
+    passthrough_command.menus.passthrough_menu:text_input("Inbound Command", { "ccpassthruinbound"..menu_id}, "The chat command that triggers this action", function(value)
+        passthrough_command.command = value
+        save_prefs()
+    end, passthrough_command.command or "")
+    passthrough_command.menus.outbound_command = passthrough_command.menus.passthrough_menu:text_input("Outbound Command", { "ccpassthruoutbound"..menu_id}, "The stand command that should be triggered by this action", function(value)
+        passthrough_command.outbound_command = value
+        save_prefs()
+    end, passthrough_command.outbound_command or "")
+
+    add_chat_command_options_to_menu(passthrough_command.menus.passthrough_menu, passthrough_command)
+
+    passthrough_command.menus.passthrough_menu:text_input("Help Text", { "ccpassthruhelp"..menu_id}, "The help text for this action", function(value)
+        passthrough_command.help = value
+        save_prefs()
+    end, passthrough_command.help or "")
+    --passthrough_command.menu:text_input("Group", {"ccpassthrugroup"..menu_id}, "The group for this command. Default: other", function(value)
+    --    passthrough_command.group = value
+    --    save_prefs()
+    --end, passthrough_command.group or "other")
+    passthrough_command.menus.passthrough_menu:toggle("Requires Player Name", {}, "Some Stand commands are player-specific. Check this box to automatically include the name of the player that issued the command.", function(value)
+        passthrough_command.outbound_command_requires_player_name = value
+        save_prefs()
+    end, passthrough_command.outbound_command_requires_player_name)
+    passthrough_command.menus.passthrough_menu:action("Delete", {}, "Delete this passthrough command", function()
+        cc.delete_passthrough_command(passthrough_command)
+        save_prefs()
+        menus.add_passthrough_command:focus()
+    end)
+end
+
+cc.delete_passthrough_command = function(deleted_command)
+    for key, passthrough_command in preferences.passthrough_commands do
+        if passthrough_command.command == deleted_command.command then
+            debug_log("Deleting passthrough command "..deleted_command.command)
+            preferences.passthrough_commands[key] = nil
+            cc.chat_commands[passthrough_command.command] = nil
+            if passthrough_command.menus.passthrough_menu and menu.is_ref_valid(passthrough_command.menus.passthrough_menu) then
+                menu.delete(passthrough_command.menus.passthrough_menu)
+            end
+            if passthrough_command.menus.root and menu.is_ref_valid(passthrough_command.menus.root) then
+                menu.delete(passthrough_command.menus.root)
+            end
+        end
+    end
+end
+
+cc.build_passthrough_menus = function()
+    for _, passthrough_command in preferences.passthrough_commands do
+        cc.add_passthrough_command_menu(passthrough_command)
+    end
+end
+cc.build_passthrough_menus()
 
 ---
 --- Announcements Menu
@@ -912,6 +1018,7 @@ menus.announcements = menu.my_root():list("Announcements", {}, "Announcements sy
 menus.announcements:action("Announce All", {"announce"}, "Immediately broadcast all relevant announcements", function()
     for _, announcement in ipairs(announcements) do
         announcement.next_announcement_time = nil
+        announce(announcement)
     end
 end)
 menus.announcements:toggle("Auto-Announcements", {}, "Automatically broadcast relevant announcements on a repeating schedule.", function(toggle)
@@ -945,7 +1052,7 @@ for index, announcement in ipairs(announcements) do
 end
 
 ---
---- Blessed Players Menu
+--- Blessed Players
 ---
 
 state.blessed_player_menus = {}
@@ -966,73 +1073,68 @@ local function build_blessed_players_menu()
     end
 end
 
----
---- Passthrough Menu
----
-
-menus.passthrough_commands = menu.my_root():list("Passthrough Commands", {}, "Allow other stand commands to be triggered via chat commands")
-menus.add_passthrough_command = menus.passthrough_commands:text_input("Add Command", {"ccpassthruadd"}, "Add a new passthrough chat command. This can then be configured to trigger another existing Stand command.", function(value)
-    local passthrough_command = cc.add_passthrough_command(value)
-    cc.add_passthrough_command_menu(passthrough_command)
-    table.insert(preferences.passthrough_commands, passthrough_command)
+menus.blessed_players = menus.root:list("Blessed Players", {}, "Blessed players have elevated permissions for certain commands")
+menus.add_blessed_player_by_name = menus.blessed_players:text_input("Add Player by Name", {"ccblessplayer"}, "Add a player to your blessed players list", function(player)
+    add_blessed_player(player)
     save_prefs()
-    menus.add_passthrough_command.value = ""
+    build_blessed_players_menu()
+    menus.add_blessed_player_by_name.value = ""
 end, "")
-
-cc.add_passthrough_command_menu = function(passthrough_command)
-    local menu_id = get_unique_menu_id()
-    passthrough_command.menu = menus.passthrough_commands:list(passthrough_command.command or "unknown", {}, "")
-    passthrough_command.menu:text_input("Inbound Command", {"ccpassthruinbound"..menu_id}, "The chat command that triggers this action", function(value)
-        passthrough_command.command = value
-        save_prefs()
-    end, passthrough_command.command or "")
-    passthrough_command.menu:text_input("Outbound Command", {"ccpassthruoutbound"..menu_id}, "The stand command that should be triggered by this action", function(value)
-        passthrough_command.outbound_command = value
-        save_prefs()
-    end, passthrough_command.outbound_command or "")
-    passthrough_command.menu:text_input("Help Text", {"ccpassthruhelp"..menu_id}, "The help text for this action", function(value)
-        passthrough_command.help = value
-        save_prefs()
-    end, passthrough_command.help or "")
-    --passthrough_command.menu:text_input("Group", {"ccpassthrugroup"..menu_id}, "The group for this command. Default: other", function(value)
-    --    passthrough_command.group = value
-    --    save_prefs()
-    --end, passthrough_command.group or "other")
-    passthrough_command.menu:toggle("Requires Player Name", {}, "Some Stand commands are player-specific. Check this box to automatically include the name of the player that issued the command.", function(value)
-        passthrough_command.outbound_command_requires_player_name = value
-        save_prefs()
-    end, passthrough_command.outbound_command_requires_player_name)
-    passthrough_command.menu:action("Delete", {}, "Delete this passthrough command", function()
-        cc.delete_passthrough_command(passthrough_command)
-        save_prefs()
-        menus.add_passthrough_command:focus()
-    end)
-end
-
-cc.delete_passthrough_command = function(deleted_command)
-    for key, passthrough_command in preferences.passthrough_commands do
-        if passthrough_command.command == deleted_command.command then
-            debug_log("Deleting passthrough command "..deleted_command.command)
-            preferences.passthrough_commands[key] = nil
-            if passthrough_command.menu:isValid() then
-                menu.delete(passthrough_command.menu)
-            end
-        end
+menus.add_blessed_player_from_lobby_list = menus.blessed_players:list("Add Player from Lobby", {}, "Add a player to your blessed players list", function(player)
+    -- Delete old menu items
+    for _, old_menu_item in menu.get_children(menus.add_blessed_player_from_lobby_list) do
+        if old_menu_item:isValid() then menu.delete(old_menu_item) end
     end
-end
-
-cc.build_passthrough_menus = function()
-    for _, passthrough_command in preferences.passthrough_commands do
-        cc.add_passthrough_command_menu(passthrough_command)
+    menu.collect_garbage()
+    -- Rebuild new menu items
+    for _, pid in players.list(false) do
+        local player_name = players.get_name(pid)
+        menus.add_blessed_player_from_lobby_list:action(player_name, {}, "", function()
+            menu.trigger_commands("ccblessplayer "..player_name)
+            menus.add_blessed_player_from_lobby_list:focus()
+        end)
     end
-end
-cc.build_passthrough_menus()
+end)
+menus.blessed_players:divider("Blessed Players")
+build_blessed_players_menu()
+
+---
+--- AFK Options
+---
+
+menus.afk_options = menus.root:list("AFK Mode", {}, "Configuration options for AFK mode")
+menus.afk_options:toggle("AFK Mode Enabled", {"afk"}, "When enabled, will attempt to keep you in an active lobby.", function(toggle)
+    config.afk_mode = toggle
+end, config.afk_mode)
+menus.afk_options:list_select("AFK Lobby Type", {}, "When in AFK mode and alone in a lobby, what type of lobby should you switch to.", constants.lobby_modes, config.lobby_mode_index, function(index)
+    config.lobby_mode_index = index
+end)
+menus.afk_options:toggle("AFK in Casino", {}, "Keep roulette rigged for others while AFK.", function(toggle)
+    config.afk_in_casino = toggle
+end, config.afk_in_casino)
+menus.afk_options:slider("Min Players in Lobby", {}, "If in AFK mode, will try to stay in a lobby with at least this many players.", 0, 30, config.min_num_players, 1, function(val)
+    config.min_num_players = val
+end, config.min_num_players)
 
 ---
 --- Settings Menu
 ---
 
 menus.settings = menu.my_root():list("Settings", {}, "Additional configuration options")
+
+menus.authorized_for = menus.settings:list("General Authorization For", {}, "To use any command a user must have general authorization. This can optionally be further restricted on each command with special authorization.")
+menus.authorized_for:toggle("Me", {}, "Yourself", function(toggle)
+    config.authorized_for.me = toggle
+end, config.authorized_for.me)
+menus.authorized_for:toggle("Friends", {}, "People on your friends list", function(toggle)
+    config.authorized_for.friends = toggle
+end, config.authorized_for.friends)
+menus.authorized_for:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
+    config.authorized_for.everyone = toggle
+end, config.authorized_for.everyone)
+menus.authorized_for:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
+    config.authorized_for.blessed = toggle
+end, config.authorized_for.blessed)
 
 menus.settings:list_select("Chat Control Character", {}, "Set the character that chat commands must begin with", constants.control_characters, config.chat_control_character_index, function(index)
     config.chat_control_character_index = index
@@ -1058,59 +1160,6 @@ end, config.reply_to_unknown_commands)
 menus.settings:toggle("Reply Visible to All", {}, "Make replies visible to everyone instead of just to the player that entered the command", function(toggle)
     config.reply_visible_to_all = toggle
 end, config.reply_visible_to_all)
-
-menus.settings:divider("Authorization")
-
-menus.authorized_for = menus.settings:list("Authorized For", {}, "What users are authorized to issue chat commands. A user must be in at least one allowed group.")
-menus.authorized_for:toggle("Me", {}, "Yourself", function(toggle)
-    config.authorized_for.me = toggle
-end, config.authorized_for.me)
-menus.authorized_for:toggle("Friends", {}, "People on your friends list", function(toggle)
-    config.authorized_for.friends = toggle
-end, config.authorized_for.friends)
-menus.authorized_for:toggle("Everyone", {}, "Everyone in the lobby", function(toggle)
-    config.authorized_for.everyone = toggle
-end, config.authorized_for.everyone)
-menus.authorized_for:toggle("Blessed", {}, "Players on your Blessed Players list", function(toggle)
-    config.authorized_for.blessed = toggle
-end, config.authorized_for.blessed)
-
-menus.blessed_players = menus.settings:list("Blessed Players", {}, "Blessed players have elevated permissions for certain commands")
-menus.add_blessed_player_by_name = menus.blessed_players:text_input("Add Player by Name", {"ccblessplayer"}, "Add a player to your blessed players list", function(player)
-    add_blessed_player(player)
-    save_prefs()
-    build_blessed_players_menu()
-    menus.add_blessed_player_by_name.value = ""
-end, "")
-menus.add_blessed_player_from_lobby_list = menus.blessed_players:list("Add Player from Lobby", {}, "Add a player to your blessed players list", function(player)
-    -- Delete old menu items
-    for _, old_menu_item in menu.get_children(menus.add_blessed_player_from_lobby_list) do
-        if old_menu_item:isValid() then menu.delete(old_menu_item) end
-    end
-    menu.collect_garbage()
-    -- Rebuild new menu items
-    for _, pid in players.list(false) do
-        local player_name = players.get_name(pid)
-        menus.add_blessed_player_from_lobby_list:action(player_name, {}, "", function()
-            menu.trigger_commands("ccblessplayer "..player_name)
-            menus.add_blessed_player_from_lobby_list:focus()
-        end)
-    end
-end)
-menus.blessed_players:divider("Blessed Players")
-build_blessed_players_menu()
-
-menus.settings:divider("AFK Options")
-
-menus.settings:list_select("AFK Lobby Type", {}, "When in AFK mode and alone in a lobby, what type of lobby should you switch to.", constants.lobby_modes, config.lobby_mode_index, function(index)
-    config.lobby_mode_index = index
-end)
-menus.settings:toggle("AFK in Casino", {}, "Keep roulette rigged for others while AFK.", function(toggle)
-    config.afk_in_casino = toggle
-end, config.afk_in_casino)
-menus.settings:slider("Min Players in Lobby", {}, "If in AFK mode, will try to stay in a lobby with at least this many players.", 0, 30, config.min_num_players, 1, function(val)
-    config.min_num_players = val
-end, config.min_num_players)
 
 ---
 --- About Menu
