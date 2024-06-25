@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.19.1"
+local SCRIPT_VERSION = "0.19.1r"
 
 ---
 --- Auto Updater
@@ -73,7 +73,7 @@ local auto_update_config = {
 }
 
 -- If loading from Stand repository, then rely on it for updates and skip auto-updater
-local is_from_repository = false
+local is_from_repository = true
 
 util.ensure_package_is_installed('lua/auto-updater')
 local auto_updater = require('auto-updater')
