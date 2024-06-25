@@ -1,7 +1,7 @@
 -- ChatCommander
 -- by Hexarobi
 
-local SCRIPT_VERSION = "0.19"
+local SCRIPT_VERSION = "0.19.1"
 
 ---
 --- Auto Updater
