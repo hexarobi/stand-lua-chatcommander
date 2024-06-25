@@ -312,9 +312,11 @@ local non_car_classes = {
 }
 
 local find_class_name = function(key)
+    --util.log("Checking class name "..key)
     --return lang.get_string(vehicle.class):lower():gsub(" ", ""):gsub("-", "")
     for _, class_key in class_keys do
         if key == util.joaat(class_key) then
+            --util.log("Found class name "..class_key)
             return class_key
         end
     end
@@ -333,13 +335,17 @@ local function build_random_vehicles()
         car={},
     }
     for _, vehicle in util.get_vehicles() do
-        if not cc_utils.is_in(vehicle.name, blocked_random_vehicles) then
+        if not table.contains(blocked_random_vehicles, vehicle.name) then
             table.insert(vehicle_utils.random_vehicles.all, vehicle.name)
             local class_name = find_class_name(vehicle.class)
-            if vehicle_utils.random_vehicles[class_name] == nil then vehicle_utils.random_vehicles[class_name] = {} end
-            table.insert(vehicle_utils.random_vehicles[class_name], vehicle.name)
-            if not cc_utils.is_in(class_name, non_car_classes) then
-                table.insert(vehicle_utils.random_vehicles.car, vehicle.name)
+            if class_name == nil then
+                util.log("Class name is nil for vehicle "..vehicle.name)
+            else
+                if vehicle_utils.random_vehicles[class_name] == nil then vehicle_utils.random_vehicles[class_name] = {} end
+                table.insert(vehicle_utils.random_vehicles[class_name], vehicle.name)
+                if not table.contains(non_car_classes, class_name) then
+                    table.insert(vehicle_utils.random_vehicles.car, vehicle.name)
+                end
             end
         end
     end
