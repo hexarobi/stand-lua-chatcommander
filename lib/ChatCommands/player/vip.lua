@@ -45,8 +45,8 @@ return {
             0,
             0,
             0,
-            memory.read_int(memory.script_global(1916087 + 9)), -- f_8
-            memory.read_int(memory.script_global(1916087 + 10)), -- f_9
+            memory.read_int(memory.script_global(1916617 + 9)), -- f_8
+            memory.read_int(memory.script_global(1916617 + 10)), -- f_9
         })
         if players.get_org_type(players.user()) == 0 then
             -- CEO Org
