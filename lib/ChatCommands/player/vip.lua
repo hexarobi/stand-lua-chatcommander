@@ -31,9 +31,25 @@ return {
                 cc_utils.help_message(pid, "Sorry, VIP is not available right now.")
             end
         end
+        -- Try to kick the player from their current organization
         if players.get_org_type(pid) ~= -1 then
-            cc_utils.help_message(pid, "You are already in an organization. Leave your CEO/MC and try again.")
-            return
+            util.log("Player is already in an organization." .. players.get_org_type(pid))
+            cc_utils.help_message(pid, "You are already in an organization. Attempting to remove you...")
+        end
+        local attempts = 10
+        local success = false
+        for i = 1, attempts do
+            if players.get_org_type(pid) == -1 then
+                success = true
+                break
+            else
+                menu.trigger_commands("ceokick " .. players.get_name(pid))
+                util.yield(1000)  -- Wait for 1 second before trying again
+            end
+        end
+
+        if not success then
+            cc_utils.help_message(pid, "Failed to remove you from the organization after " .. attempts .. " attempts.")
         end
         -- Thanks to Totaw Annihiwation for this script event! // Position - 0x2725D7
         util.trigger_script_event(1 << pid, {
