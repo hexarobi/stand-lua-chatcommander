@@ -487,8 +487,8 @@ local announcements = {
         name="Basic Commands",
         messages={
             "Chat commands are now enabled for you! Spawn any vehicle with !name (Ex: !deluxo !op2 !raiju) "..
-            "Keep them with !gift Lose cops with !bail Heal with !autoheal Teleport with !tp Get RP with !levelup "..
-            "Get more help with !help"
+            "Lose cops with !bail Heal with !autoheal Teleport with !tp Get RP with !levelup "..
+            "Get all weapons with !allguns Get more help with !help"
         },
     },
     {
@@ -498,12 +498,12 @@ local announcements = {
             return config.afk_mode and utils.is_player_in_casino(players.user())
         end
     },
-    {
-        name="How to Gift",
-        messages={
-            "To keep spawned cars, start with a basic 10 car garage (!tp giftgarage) and fill it with any free car from phone, return your personal vehicle to garage, then use !gift",
-        }
-    }
+    --{
+    --    name="How to Gift",
+    --    messages={
+    --        "To keep spawned cars, start with a basic 10 car garage (!tp giftgarage) and fill it with any free car from phone, return your personal vehicle to garage, then use !gift",
+    --    }
+    --}
 }
 
 local function announce(announcement)
