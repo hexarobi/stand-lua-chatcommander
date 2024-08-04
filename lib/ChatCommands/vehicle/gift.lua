@@ -62,18 +62,21 @@ local function dont_be_script_host(gifting_player_id)
 end
 
 return {
+    enabled=false,
     command="gift",
     group="vehicle",
     help={
-        "To keep spawned cars, start with a basic 10 car garage (!tp giftgarage) and fill it with any free car from phone, then use !gift",
+        "Gifting vehicles has been patched and no longer works. Sorry. :("
+        --"To keep spawned cars, start with a basic 10 car garage (!tp giftgarage) and fill it with any free car from phone, then use !gift",
     },
     execute=function(pid)
-        local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
-        if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
-            clear_invisible_vehicles(pid)
-            dont_be_script_host()
-            gift_vehicle_to_player(pid, vehicle)
-            cc_utils.help_message(pid, "You may now park this car in a full garage and permanently replace another car. For more help say !help gift")
-        end
+        cc_utils.help_message(pid, "Unfortunately vehicle gifting has been removed in the latest update and no longer works.")
+        --local vehicle = vehicle_utils.get_player_vehicle_in_control(pid)
+        --if vehicle_utils.is_vehicle_command_ready(pid, vehicle) then
+        --    clear_invisible_vehicles(pid)
+        --    dont_be_script_host()
+        --    gift_vehicle_to_player(pid, vehicle)
+        --    cc_utils.help_message(pid, "You may now park this car in a full garage and permanently replace another car. For more help say !help gift")
+        --end
     end
 }
